@@ -90,17 +90,22 @@ void print_tree(NODE *tree)
 }
 
 extern int yydebug;
-extern NODE* yyparse(void);
+extern NODE* yyparse(char* fileName);
 extern NODE* ans;
 extern void init_symbtable(void);
 
 int main(int argc, char** argv)
 {
+    char* fileName = "";
     NODE* tree;
-    if (argc>1 && strcmp(argv[1],"-d")==0) yydebug = 1;
+
+    fileName = argv[1];
+
+    if (argc>2 && strcmp(argv[2],"-d")==0) yydebug = 1;
+
     init_symbtable();
     printf("--C COMPILER\n");
-    yyparse();
+    yyparse(fileName);
     tree = ans;
     printf("parse finished with %p\n", tree);
     print_tree(tree);

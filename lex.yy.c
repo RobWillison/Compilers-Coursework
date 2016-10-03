@@ -569,7 +569,7 @@ YY_MALLOC_DECL
  * easily add parameters.
  */
 #ifndef YY_DECL
-#define YY_DECL int yylex YY_PROTO(( void ))
+#define YY_DECL int yylex YY_PROTO(( char* fileName ))
 #endif
 
 /* Code executed at the beginning of each rule, after yytext and yyleng
@@ -609,7 +609,7 @@ YY_DECL
 			yy_start = 1;	/* first start state */
 
 		if ( ! yyin )
-			yyin = stdin;
+      yyin = fopen(fileName, "r");
 
 		if ( ! yyout )
 			yyout = stdout;
@@ -1337,6 +1337,7 @@ void yyrestart( input_file )
 FILE *input_file;
 #endif
 	{
+
 	if ( ! yy_current_buffer )
 		yy_current_buffer = yy_create_buffer( yyin, YY_BUF_SIZE );
 
@@ -1757,7 +1758,7 @@ void *ptr;
 #if YY_MAIN
 int main()
 	{
-	yylex();
+	yylex("Examples/simple.c");
 	return 0;
 	}
 #endif

@@ -363,22 +363,22 @@ static const unsigned short yyrline[] =
    First, the terminals, then, starting at YYNTOKENS, nonterminals. */
 static const char *const yytname[] =
 {
-  "$end", "error", "$undefined", "IDENTIFIER", "CONSTANT", "STRING_LITERAL", 
-  "LE_OP", "GE_OP", "EQ_OP", "NE_OP", "EXTERN", "AUTO", "INT", "VOID", 
-  "FUNCTION", "APPLY", "LEAF", "IF", "ELSE", "WHILE", "CONTINUE", "BREAK", 
-  "RETURN", "'('", "')'", "','", "'&'", "'*'", "'+'", "'-'", "'!'", "'/'", 
-  "'%'", "'<'", "'>'", "'='", "';'", "'{'", "'}'", "$accept", "goal", 
-  "primary_expression", "postfix_expression", "argument_expression_list", 
-  "unary_expression", "unary_operator", "multiplicative_expression", 
-  "additive_expression", "relational_expression", "equality_expression", 
-  "assignment_expression", "expression", "declaration", 
-  "declaration_specifiers", "init_declarator_list", "init_declarator", 
-  "storage_class_specifier", "type_specifier", "declarator", 
-  "direct_declarator", "pointer", "parameter_list", 
-  "parameter_declaration", "identifier_list", "abstract_declarator", 
-  "direct_abstract_declarator", "statement", "compound_statement", 
-  "declaration_list", "statement_list", "expression_statement", 
-  "selection_statement", "iteration_statement", "jump_statement", 
+  "$end", "error", "$undefined", "IDENTIFIER", "CONSTANT", "STRING_LITERAL",
+  "LE_OP", "GE_OP", "EQ_OP", "NE_OP", "EXTERN", "AUTO", "INT", "VOID",
+  "FUNCTION", "APPLY", "LEAF", "IF", "ELSE", "WHILE", "CONTINUE", "BREAK",
+  "RETURN", "'('", "')'", "','", "'&'", "'*'", "'+'", "'-'", "'!'", "'/'",
+  "'%'", "'<'", "'>'", "'='", "';'", "'{'", "'}'", "$accept", "goal",
+  "primary_expression", "postfix_expression", "argument_expression_list",
+  "unary_expression", "unary_operator", "multiplicative_expression",
+  "additive_expression", "relational_expression", "equality_expression",
+  "assignment_expression", "expression", "declaration",
+  "declaration_specifiers", "init_declarator_list", "init_declarator",
+  "storage_class_specifier", "type_specifier", "declarator",
+  "direct_declarator", "pointer", "parameter_list",
+  "parameter_declaration", "identifier_list", "abstract_declarator",
+  "direct_abstract_declarator", "statement", "compound_statement",
+  "declaration_list", "statement_list", "expression_statement",
+  "selection_statement", "iteration_statement", "jump_statement",
   "translation_unit", "external_declaration", "function_definition", 0
 };
 #endif
@@ -679,7 +679,7 @@ while (0)
 #ifdef YYLEX_PARAM
 # define YYLEX yylex (YYLEX_PARAM)
 #else
-# define YYLEX yylex ()
+# define YYLEX yylex ( fileName )
 #endif
 
 /* Enable debugging if requested.  */
@@ -933,9 +933,9 @@ int yyparse ();
 # endif
 #else /* ! YYPARSE_PARAM */
 #if defined (__STDC__) || defined (__cplusplus)
-int yyparse (void);
+int yyparse ( char* fileName );
 #else
-int yyparse ();
+int yyparse ( char* fileName );
 #endif
 #endif /* ! YYPARSE_PARAM */
 
@@ -966,7 +966,7 @@ int yyparse (YYPARSE_PARAM)
 #else /* ! YYPARSE_PARAM */
 #if defined (__STDC__) || defined (__cplusplus)
 int
-yyparse (void)
+yyparse (char* fileName)
 #else
 int
 yyparse ()
@@ -974,7 +974,7 @@ yyparse ()
 #endif
 #endif
 {
-  
+
   register int yystate;
   register int yyn;
   int yyresult;
@@ -1433,7 +1433,7 @@ yyreduce:
 
   case 42:
 #line 115 "C.y"
-    { 
+    {
                                                   yyval = make_node('~', yyvsp[-1], yyvsp[0]); ;}
     break;
 
@@ -1994,5 +1994,3 @@ int yyerror(char *s)
 	fflush(stdout);
 	printf("\n%*s\n%*s\n", column, "^", column, s);
 }
-
-

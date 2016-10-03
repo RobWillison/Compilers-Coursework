@@ -8,7 +8,7 @@ clean:
 	rm ${OBJS}
 
 mycc:	${OBJS}
-	${CC} -g -o mycc ${OBJS} 
+	${CC} -g -o mycc ${OBJS}
 
 lex.yy.c: C.flex
 	flex C.flex
@@ -19,7 +19,7 @@ C.tab.c:	C.y
 .c.o:
 	${CC} -g -c $*.c
 
-depend:	
+depend:
 	${CC} -M $(SRCS) > .deps
 	cat Makefile .deps > makefile
 
