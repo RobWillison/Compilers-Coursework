@@ -4,8 +4,6 @@
 #include "C.tab.h"
 #include <string.h>
 
-#define FINISHED 999
-
 char *named(int t)
 {
     static char b[100];
@@ -113,7 +111,30 @@ void store_variable(NODE *tree)
 
   add_token(token);
 }
+//MY STUFF
 
+int terminated = 0;
+
+int intepret_if(NODE *tree)
+{
+  int condition_result = intepret(tree->left);
+
+  //If its an if else
+  if (tree->right->type == ELSE) {
+    if(condition_result)
+    {
+      return intepret(tree->right->left);
+    } else {
+      return intepret(tree->right->right);
+    }
+  }
+
+  if(condition_result)
+  {
+    return intepret(tree->right);
+  }
+
+}
 
 int intepret(NODE *tree)
 {
@@ -124,7 +145,17 @@ int intepret(NODE *tree)
   switch (tree->type) {
 
     case RETURN:
+      terminated = 1;
       return intepret(tree->left);
+
+    case IF:
+      return intepret_if(tree);
+
+    case '<':
+      return intepret(tree->left) < intepret(tree->right);
+
+    case '>':
+      return intepret(tree->left) > intepret(tree->right);
 
     case '*':
       return intepret(tree->left) * intepret(tree->right);
@@ -153,7 +184,7 @@ int intepret(NODE *tree)
         TOKEN *t = (TOKEN *)tree->left;
         char *identifier = t->lexeme;
 
-        TOKEN *stored_value = (TOKEN *) lookup_token(identifier);
+        TOKEN *stored_value = (TOKEN *) (long) lookup_token(identifier);
 
         return stored_value->value;
       }
@@ -161,12 +192,12 @@ int intepret(NODE *tree)
 
   if (tree->type = ';') {
     int returned_value = intepret(tree->left);
-    if (returned_value == FINISHED) {
+    if (terminated) {
       return returned_value;
     }
 
     returned_value = intepret(tree->right);
-    if (returned_value == FINISHED) {
+    if (terminated) {
       return returned_value;
     }
   }
