@@ -1,5 +1,5 @@
 /*
- * Adapted from 
+ * Adapted from
  * CM20029 Coursework Assignment 1
  * Tom Crick
  * cs1tc@bath.ac.uk
@@ -16,11 +16,14 @@
 
 static TOKEN** symbtable;
 #define HASH_SIZE (1000)
+#define LIST 898;
+
 TOKEN *int_token, *void_token, *function_token;
 
 void init_symbtable(void)
 {
     symbtable = (TOKEN**)calloc(HASH_SIZE, sizeof(TOKEN*));
+
     int_token = new_token(INT);
     int_token->lexeme = "int";
     function_token = new_token(FUNCTION);
@@ -54,5 +57,17 @@ TOKEN* lookup_token(char *s)
     ans->next = symbtable[h];
     symbtable[h] = ans;
 /*     printf(" stored at %p\n", ans); */
+
     return ans;
+}
+
+void add_token(TOKEN *token)
+{
+  int h = hash(token->lexeme);
+
+  if (symbtable[h] == NULL) {
+    symbtable[h] = token;
+  } else {
+    symbtable[h]->next = token;
+  }
 }

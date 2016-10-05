@@ -4,6 +4,8 @@
 #include "C.tab.h"
 #include <string.h>
 
+#define FINISHED 999
+
 char *named(int t)
 {
     static char b[100];
@@ -94,6 +96,86 @@ extern NODE* yyparse(char* fileName);
 extern NODE* ans;
 extern void init_symbtable(void);
 
+
+
+void store_variable(NODE *tree)
+{
+  //node->left is the leaf for the identifier;
+  TOKEN *identifier = (TOKEN *) tree->left->left;
+  char *name = identifier->lexeme;
+
+  //node->right is the value;
+  int value = intepret(tree->right);
+
+  TOKEN *token = new_token(CONSTANT);
+  token->lexeme = name;
+  token->value = value;
+
+  add_token(token);
+}
+
+
+int intepret(NODE *tree)
+{
+  printf("NEXT TREE\n");
+  print_tree(tree);
+
+  //Find the type of the node and do something appropriate
+  switch (tree->type) {
+
+    case RETURN:
+      return intepret(tree->left);
+
+    case '*':
+      return intepret(tree->left) * intepret(tree->right);
+
+    case '/':
+      return intepret(tree->left) / intepret(tree->right);
+
+    case '+':
+      return intepret(tree->left) + intepret(tree->right);
+
+    case '-':
+      return intepret(tree->left) - intepret(tree->right);
+
+    case '~':
+      //declaration
+      //type is in left, value right
+      store_variable(tree->right);
+      return;
+
+    case LEAF:
+      if(tree->left->type == CONSTANT) {
+        TOKEN *t = (TOKEN *)tree->left;
+        return t->value;
+      }
+      if(tree->left->type == IDENTIFIER) {
+        TOKEN *t = (TOKEN *)tree->left;
+        char *identifier = t->lexeme;
+
+        TOKEN *stored_value = (TOKEN *) lookup_token(identifier);
+
+        return stored_value->value;
+      }
+  }
+
+  if (tree->type = ';') {
+    int returned_value = intepret(tree->left);
+    if (returned_value == FINISHED) {
+      return returned_value;
+    }
+
+    returned_value = intepret(tree->right);
+    if (returned_value == FINISHED) {
+      return returned_value;
+    }
+  }
+}
+
+
+
+
+
 int main(int argc, char** argv)
 {
     char* fileName = "";
@@ -109,5 +191,14 @@ int main(int argc, char** argv)
     tree = ans;
     printf("parse finished with %p\n", tree);
     print_tree(tree);
+
+    printf("Starting Interpretation\n");
+
+    init_symbtable();
+    int result = intepret(tree->right);
+
+    printf("\n\nRESULT: %d\n", result);
+
+
     return 0;
 }

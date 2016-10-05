@@ -1,4 +1,8 @@
 int main()
 {
-    return 0;
+    int t = 2;
+
+    int x = 7;
+
+    return t * x;
 }
