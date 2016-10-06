@@ -94,10 +94,10 @@ void print_tree(NODE *tree)
 extern int yydebug;
 extern NODE* yyparse(char* fileName);
 extern NODE* ans;
-extern void init_symbtable(void);
+extern TOKEN** init_symbtable(void);
 
 //MY STUFF
-extern RESULT* intepret(NODE *tree);
+extern RESULT* intepret_body(NODE *tree, TOKEN **enviroment);
 
 RESULT* new_result(int value)
 {
@@ -106,51 +106,51 @@ RESULT* new_result(int value)
   return ans;
 }
 
-void store_variable(NODE *tree)
+void store_variable(TOKEN **enviroment, NODE *tree)
 {
   //node->left is the leaf for the identifier;
   TOKEN *identifier = (TOKEN *) tree->left->left;
   char *name = identifier->lexeme;
 
   //node->right is the value;
-  RESULT *value = intepret(tree->right);
+  RESULT *value = intepret_body(tree->right, enviroment);
 
   TOKEN *token = new_token(CONSTANT);
   token->lexeme = name;
   token->value = value->value;
 
-  add_token(token);
+  add_token(enviroment, token);
 }
 
 int terminated = 0;
 
-RESULT* intepret_condition(NODE *tree)
+RESULT* intepret_condition(NODE *tree, TOKEN **enviroment)
 {
-  RESULT *condition_result = intepret(tree->left);
+  RESULT *condition_result = intepret_body(tree->left, enviroment);
 
   //If its an if else
   if (tree->right->type == ELSE) {
     if(condition_result->value)
     {
-      return intepret(tree->right->left);
+      return intepret_body(tree->right->left, enviroment);
     } else {
-      return intepret(tree->right->right);
+      return intepret_body(tree->right->right, enviroment);
     }
   }
 
   if(condition_result->value)
   {
-    return intepret(tree->right);
+    return intepret_body(tree->right, enviroment);
   }
 
   //THIS IS A BODGE
   return new_result(0);
 }
 
-RESULT* intepret_math(NODE *tree)
+RESULT* intepret_math(NODE *tree, TOKEN **enviroment)
 {
-  RESULT *left_result = intepret(tree->left);
-  RESULT *right_result = intepret(tree->right);
+  RESULT *left_result = intepret_body(tree->left, enviroment);
+  RESULT *right_result = intepret_body(tree->right, enviroment);
 
   int left_value = left_result->value;
   int right_value = right_result->value;
@@ -204,24 +204,20 @@ RESULT* intepret_math(NODE *tree)
   return result;
 }
 
-RESULT* intepret(NODE *tree)
+RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
 {
-
-  printf("NEXT TREE\n");
-  print_tree(tree);
-
   //Find the type of the node and do something appropriate
   RESULT *result = new_result(0);
 
   switch (tree->type) {
 
     case RETURN:
-      result = intepret(tree->left);
+      result = intepret_body(tree->left, enviroment);
       result->terminated = 1;
       return result;
 
     case IF:
-      return intepret_condition(tree);
+      return intepret_condition(tree, enviroment);
 
     case '<':
     case '>':
@@ -233,12 +229,12 @@ RESULT* intepret(NODE *tree)
     case GE_OP:
     case EQ_OP:
     case NE_OP:
-      return intepret_math(tree);
+      return intepret_math(tree, enviroment);
 
     case '~':
       //declaration
       //type is in left, value right
-      store_variable(tree->right);
+      store_variable(enviroment, tree->right);
       return;
 
     case LEAF:
@@ -251,7 +247,7 @@ RESULT* intepret(NODE *tree)
         TOKEN *t = (TOKEN *)tree->left;
         char *identifier = t->lexeme;
 
-        TOKEN *stored_value = (TOKEN *) (long) lookup_token(identifier);
+        TOKEN *stored_value = (TOKEN *) (long) lookup_token(enviroment, identifier);
 
         result->value = stored_value->value;
         return result;
@@ -259,16 +255,38 @@ RESULT* intepret(NODE *tree)
   }
 
   if (tree->type = ';') {
-    result = intepret(tree->left);
+    result = intepret_body(tree->left, enviroment);
     if (result->terminated) {
       return result;
     }
 
-    result = intepret(tree->right);
+    result = intepret_body(tree->right, enviroment);
     if (result->terminated) {
       return result;
     }
   }
+}
+
+
+
+RESULT* intepret(NODE *tree, TOKEN **enviroment)
+{
+  printf("NEXT TREE\n");
+  print_tree(tree);
+  intepret_body(tree->right, enviroment);
+  //Get all definitions
+  // switch(tree->type)
+  // {
+  //   case '~':
+  //     intepret(tree->left);
+  //     intepret(tree->right);
+  //   case 'D':
+  //
+  // }
+
+  //Call Main
+
+
 }
 
 int main(int argc, char** argv)
@@ -288,9 +306,8 @@ int main(int argc, char** argv)
     print_tree(tree);
 
     printf("Starting Interpretation\n");
-
-    init_symbtable();
-    RESULT *result = intepret(tree->right);
+    TOKEN **enviroment = init_symbtable();
+    RESULT *result = intepret(tree, enviroment);
 
     printf("\n\nRESULT: %d\n", result->value);
 
