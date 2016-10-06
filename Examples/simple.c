@@ -1,8 +1,6 @@
 int main()
 {
-    if (1 < 4) {
-      return 4;
-    }
+    int x = 9;
 
-    return 8;
+    return x;
 }

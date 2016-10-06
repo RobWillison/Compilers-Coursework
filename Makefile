@@ -1,5 +1,5 @@
-OBJS = lex.yy.o C.tab.o symbol_table.o nodes.o main.o
-SRCS = lex.yy.c C.tab.c symbol_table.c nodes.c main.c
+OBJS = hash_table.o lex.yy.o C.tab.o symbol_table.o nodes.o main.o
+SRCS = hash_table.c lex.yy.c C.tab.c symbol_table.c nodes.c main.c
 CC = gcc
 
 all:	mycc

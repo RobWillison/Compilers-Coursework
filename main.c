@@ -103,6 +103,7 @@ RESULT* new_result(int value)
 {
   RESULT *ans = (RESULT*)malloc(sizeof(RESULT));
   ans->value = value;
+  ans->terminated = 0;
   return ans;
 }
 
@@ -119,7 +120,7 @@ void store_variable(TOKEN **enviroment, NODE *tree)
   token->lexeme = name;
   token->value = value->value;
 
-  add_token(enviroment, token);
+  add_variable(enviroment, token);
 }
 
 int terminated = 0;
@@ -206,6 +207,8 @@ RESULT* intepret_math(NODE *tree, TOKEN **enviroment)
 
 RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
 {
+  printf("NEXT TREE\n");
+  print_tree(tree);
   //Find the type of the node and do something appropriate
   RESULT *result = new_result(0);
 
@@ -235,7 +238,8 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
       //declaration
       //type is in left, value right
       store_variable(enviroment, tree->right);
-      return;
+      //Another HACK!!!
+      return new_result(0);
 
     case LEAF:
       if(tree->left->type == CONSTANT) {
@@ -247,7 +251,7 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
         TOKEN *t = (TOKEN *)tree->left;
         char *identifier = t->lexeme;
 
-        TOKEN *stored_value = (TOKEN *) (long) lookup_token(enviroment, identifier);
+        TOKEN *stored_value = (TOKEN *) (long) lookup_variable(enviroment, identifier);
 
         result->value = stored_value->value;
         return result;
@@ -256,9 +260,11 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
 
   if (tree->type = ';') {
     result = intepret_body(tree->left, enviroment);
+
     if (result->terminated) {
       return result;
     }
+
 
     result = intepret_body(tree->right, enviroment);
     if (result->terminated) {
@@ -271,8 +277,7 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
 
 RESULT* intepret(NODE *tree, TOKEN **enviroment)
 {
-  printf("NEXT TREE\n");
-  print_tree(tree);
+
   intepret_body(tree->right, enviroment);
   //Get all definitions
   // switch(tree->type)
@@ -298,7 +303,7 @@ int main(int argc, char** argv)
 
     if (argc>2 && strcmp(argv[2],"-d")==0) yydebug = 1;
 
-    init_symbtable();
+    TOKEN **enviroment = init_symbtable();
     printf("--C COMPILER\n");
     yyparse(fileName);
     tree = ans;
@@ -306,10 +311,10 @@ int main(int argc, char** argv)
     print_tree(tree);
 
     printf("Starting Interpretation\n");
-    TOKEN **enviroment = init_symbtable();
+
     RESULT *result = intepret(tree, enviroment);
 
     printf("\n\nRESULT: %d\n", result->value);
 
-    return 0;
+    return result->value;
 }
