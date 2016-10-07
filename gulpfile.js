@@ -1,7 +1,7 @@
 var gulp = require('gulp'),
     watch = require('gulp-watch'),
     notify = require("gulp-notify"),
-    exec = require('gulp-exec');
+    exec = require('child_process').exec;
 
 gulp.task('make', function (done) {
     exec('make all', function (err, stdout, stderr) {
