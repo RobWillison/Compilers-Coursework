@@ -14,15 +14,16 @@
 #include "token.h"
 #include "C.tab.h"
 
-static TOKEN** symbtable;
+
+
 #define HASH_SIZE (1000)
 #define LIST 898;
 
 TOKEN *int_token, *void_token, *function_token;
 
-void init_symbtable(void)
+TOKEN** init_symbtable(void)
 {
-    symbtable = (TOKEN**)calloc(HASH_SIZE, sizeof(TOKEN*));
+    TOKEN **symbtable = (TOKEN**)calloc(HASH_SIZE, sizeof(TOKEN*));
 
     int_token = new_token(INT);
     int_token->lexeme = "int";
@@ -30,6 +31,8 @@ void init_symbtable(void)
     function_token->lexeme = "function";
     void_token = new_token(VOID);
     void_token->lexeme = "void";
+
+    return symbtable;
 }
 
 int hash(char *s)
@@ -41,7 +44,7 @@ int hash(char *s)
     return (0x7fffffff&h) % HASH_SIZE;
 }
 
-TOKEN* lookup_token(char *s)
+TOKEN* lookup_token(TOKEN **symbtable, char *s)
 {
     int	h = hash(s);
     TOKEN *a = symbtable[h];
@@ -61,7 +64,7 @@ TOKEN* lookup_token(char *s)
     return ans;
 }
 
-void add_token(TOKEN *token)
+void add_token(TOKEN **symbtable, TOKEN *token)
 {
   int h = hash(token->lexeme);
 
