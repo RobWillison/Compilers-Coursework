@@ -1,0 +1,26 @@
+{
+  "name": "compilers",
+  "version": "1.0.0",
+  "description": "Compiler Coursework",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-exec": "^2.1.2",
+    "gulp-notify": "^2.2.0",
+    "gulp-watch": "^4.3.10"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobWillison/Compilers.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RobWillison/Compilers/issues"
+  },
+  "homepage": "https://github.com/RobWillison/Compilers#readme"
+}

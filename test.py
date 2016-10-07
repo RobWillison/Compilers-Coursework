@@ -11,8 +11,8 @@ for file in glob.glob("Examples/test*"):
 
     if(expected[file] != result):
         print("FAIL: " + file +" RESULT: " + str(result) + " EXPECTED: " + str(expected))
-        exit(1)
+        exit(1);
 
 
-
+print("SUCCESS!!")
 exit(0);
