@@ -3,14 +3,26 @@ var gulp = require('gulp'),
     notify = require("gulp-notify"),
     exec = require('gulp-exec');
 
+gulp.task('make', function (done) {
+    exec('make all', function (err, stdout, stderr) {
+
+        if (err) {
+          notify().write("BUILD FAILD!!!!! :(");
+        } else {
+          gulp.start('test');
+        }
+      });
+
+    done();
+});
 
 gulp.task('test', function (done) {
     exec('python3 test.py', function (err, stdout, stderr) {
-        console.log(stdout);
+
         if (err) {
           notify().write(stdout);
         } else {
-          notify().write("SUCCESS");
+          notify().write("TEST SUCCESS");
         }
       });
 
@@ -21,6 +33,6 @@ gulp.task('test', function (done) {
 gulp.task('watch', function () {
     // Endless stream mode
     return watch('*.c', function () {
-        gulp.start('test');
+        gulp.start('make');
     });
 });
