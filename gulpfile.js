@@ -5,14 +5,14 @@ var gulp = require('gulp'),
 
 
 gulp.task('test', function (done) {
-    console.log(exec('python3 test.py', function (err, stdout, stderr) {
+    exec('python3 test.py', function (err, stdout, stderr) {
         console.log(stdout);
         if (err) {
           notify().write(stdout);
         } else {
           notify().write("SUCCESS");
         }
-      }));
+      });
 
     done();
 });
