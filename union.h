@@ -4,6 +4,7 @@ typedef struct UNION
 {
   int           type;
   int           value;
+  struct CLOSURE  *closure;
   struct UNION  *pointer;
 
 } UNION;
