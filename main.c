@@ -4,7 +4,11 @@
 #include "C.tab.h"
 #include <string.h>
 #include "token.h"
-#include "result.h"
+#include "union.h"
+#include "frame.h"
+
+#define ANSWERVALUE 254
+#define NOTHING 0
 
 char *named(int t)
 {
@@ -60,6 +64,7 @@ void print_leaf(NODE *tree, int level)
 {
     TOKEN *t = (TOKEN *)tree;
     int i;
+
     for (i=0; i<level; i++) putchar(' ');
     if (t->type == CONSTANT) printf("%d\n", t->value);
     else if (t->type == STRING_LITERAL) printf("\"%s\"\n", t->lexeme);
@@ -68,6 +73,7 @@ void print_leaf(NODE *tree, int level)
 
 void print_tree0(NODE *tree, int level)
 {
+
     int i;
     if (tree==NULL) return;
     if (tree->type==LEAF) {
@@ -97,37 +103,70 @@ extern NODE* ans;
 extern TOKEN** init_symbtable(void);
 
 //MY STUFF
-extern RESULT* intepret_body(NODE *tree, TOKEN **enviroment);
+extern UNION* intepret_body(NODE *tree, FRAME *enviroment);
 
-RESULT* new_result(int value)
+UNION* new_result(int type, int value)
 {
-  RESULT *ans = (RESULT*)malloc(sizeof(RESULT));
+  UNION *ans = (UNION*)malloc(sizeof(UNION));
   ans->value = value;
-  ans->terminated = 0;
+  ans->type = type;
   return ans;
 }
 
-void store_variable(TOKEN **enviroment, NODE *tree)
+FRAME* new_frame()
 {
-  //node->left is the leaf for the identifier;
-  TOKEN *identifier = (TOKEN *) tree->left->left;
-  char *name = identifier->lexeme;
-
-  //node->right is the value;
-  RESULT *value = intepret_body(tree->right, enviroment);
-
-  TOKEN *token = new_token(CONSTANT);
-  token->lexeme = name;
-  token->value = value->value;
-
-  add_variable(enviroment, token);
+  FRAME *ans = (FRAME*)malloc(sizeof(FRAME));
+  ans->next = NULL;
+  ans->value = NULL;
+  return ans;
 }
 
-int terminated = 0;
-
-RESULT* intepret_condition(NODE *tree, TOKEN **enviroment)
+VARIABLE* new_variable(TOKEN *token, UNION *value)
 {
-  RESULT *condition_result = intepret_body(tree->left, enviroment);
+  VARIABLE *ans = (VARIABLE*)malloc(sizeof(VARIABLE));
+  ans->token = token;
+  ans->value = value;
+  ans->next = NULL;
+  return ans;
+}
+
+void store_variable(FRAME *enviroment, TOKEN *token, UNION *value)
+{
+  VARIABLE *variable = new_variable(token, value);
+
+  if(enviroment->value == NULL){
+    enviroment->value = (VARIABLE*)&variable;
+  } else {
+    VARIABLE *current = (VARIABLE*)enviroment->value;
+    while (current->next != NULL) {
+      current = (VARIABLE*)current->next;
+    }
+    current->next = (VARIABLE*)&variable;
+  }
+}
+
+UNION* lookup_variable(FRAME *enviroment, TOKEN *token)
+{
+  //Loop Through Frames
+  while(enviroment->value != NULL)
+  {
+    VARIABLE *pointer = (VARIABLE*)enviroment->value;
+    while(pointer != NULL)
+    {
+      if (pointer->token == token)
+      {
+        return pointer->value;
+      }
+      pointer = pointer->next;
+    }
+    enviroment = (FRAME*)enviroment->next;
+  }
+}
+
+
+UNION* intepret_condition(NODE *tree, FRAME *enviroment)
+{
+  UNION *condition_result = intepret_body(tree->left, enviroment);
 
   //If its an if else
   if (tree->right->type == ELSE) {
@@ -145,13 +184,13 @@ RESULT* intepret_condition(NODE *tree, TOKEN **enviroment)
   }
 
   //THIS IS A BODGE
-  return new_result(0);
+  return new_result(NOTHING, 0);
 }
 
-RESULT* intepret_math(NODE *tree, TOKEN **enviroment)
+UNION* intepret_math(NODE *tree, FRAME *enviroment)
 {
-  RESULT *left_result = intepret_body(tree->left, enviroment);
-  RESULT *right_result = intepret_body(tree->right, enviroment);
+  UNION *left_result = intepret_body(tree->left, enviroment);
+  UNION *right_result = intepret_body(tree->right, enviroment);
 
   int left_value = left_result->value;
   int right_value = right_result->value;
@@ -159,6 +198,7 @@ RESULT* intepret_math(NODE *tree, TOKEN **enviroment)
   int result_value = 0;
 
   switch (tree->type) {
+
     case '<':
       result_value = left_value < right_value;
       break;
@@ -200,23 +240,25 @@ RESULT* intepret_math(NODE *tree, TOKEN **enviroment)
       break;
   }
 
-  RESULT *result = new_result(result_value);
+  UNION *result = new_result(INT, result_value);
 
   return result;
 }
 
-RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
+UNION* intepret_body(NODE *tree, FRAME *enviroment)
 {
   printf("NEXT TREE\n");
+
   print_tree(tree);
+
   //Find the type of the node and do something appropriate
-  RESULT *result = new_result(0);
+  UNION *result = new_result(NOTHING, 0);
 
   switch (tree->type) {
-
     case RETURN:
       result = intepret_body(tree->left, enviroment);
-      result->terminated = 1;
+      result->type = ANSWERVALUE;
+
       return result;
 
     case IF:
@@ -235,11 +277,14 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
       return intepret_math(tree, enviroment);
 
     case '~':
-      //declaration
-      //type is in left, value right
-      store_variable(enviroment, tree->right);
-      //Another HACK!!!
-      return new_result(0);
+      if (tree->left->left->type == INT) {
+        TOKEN *token = (TOKEN*)tree->right->left;
+
+        UNION *result = new_result(INT, token->value);
+
+        store_variable(enviroment, token, result);
+      }
+      return;
 
     case LEAF:
       if(tree->left->type == CONSTANT) {
@@ -249,10 +294,10 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
       }
       if(tree->left->type == IDENTIFIER) {
         TOKEN *t = (TOKEN *)tree->left;
-        char *identifier = t->lexeme;
 
-        TOKEN *stored_value = (TOKEN *) (long) lookup_variable(enviroment, identifier);
+        UNION *stored_value = (UNION*)lookup_variable(enviroment, t);
 
+        //TODO
         result->value = stored_value->value;
         return result;
       }
@@ -261,37 +306,37 @@ RESULT* intepret_body(NODE *tree, TOKEN **enviroment)
   if (tree->type = ';') {
     result = intepret_body(tree->left, enviroment);
 
-    if (result->terminated) {
+    if (result->type == ANSWERVALUE) {
       return result;
     }
 
 
     result = intepret_body(tree->right, enviroment);
-    if (result->terminated) {
+    if (result->type == ANSWERVALUE) {
       return result;
     }
   }
 }
 
-
-
-RESULT* intepret(NODE *tree, TOKEN **enviroment)
+void interpret_definition(NODE *tree, FRAME *enviroment)
 {
+  //TODO
+}
 
-  intepret_body(tree->right, enviroment);
-  //Get all definitions
-  // switch(tree->type)
-  // {
-  //   case '~':
-  //     intepret(tree->left);
-  //     intepret(tree->right);
-  //   case 'D':
-  //
-  // }
+UNION* intepret(NODE *tree, FRAME *enviroment)
+{
+  //Get all definition
+  switch(tree->type)
+  {
+    case '~':
+      intepret(tree->left, enviroment);
+      intepret(tree->right, enviroment);
+    case 'D':
+      interpret_definition(tree, enviroment);
+  }
 
-  //Call Main
 
-
+  return intepret_body(tree->right, enviroment);
 }
 
 int main(int argc, char** argv)
@@ -303,7 +348,7 @@ int main(int argc, char** argv)
 
     if (argc>2 && strcmp(argv[2],"-d")==0) yydebug = 1;
 
-    TOKEN **enviroment = init_symbtable();
+    init_symbtable();
     printf("--C COMPILER\n");
     yyparse(fileName);
     tree = ans;
@@ -312,9 +357,10 @@ int main(int argc, char** argv)
 
     printf("Starting Interpretation\n");
 
-    RESULT *result = intepret(tree, enviroment);
+    FRAME *enviroment = new_frame();
+    UNION *result = (UNION*)intepret(tree, enviroment);
 
-    printf("\n\nRESULT: %d\n", result->value);
+    printf("\n\RESULT: %d\n", result->value);
 
     return result->value;
 }
