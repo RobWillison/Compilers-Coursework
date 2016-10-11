@@ -7,7 +7,6 @@
 
 
 #define ANSWERVALUE 254
-#define NOTHING 0
 
 void print_variable_list(VARIABLE *pointer)
 {
@@ -233,9 +232,6 @@ UNION* intepret_condition(NODE *tree, FRAME *enviroment)
   {
     return intepret_body(tree->right, enviroment);
   }
-
-  //THIS IS A BODGE
-  return new_union(NOTHING);
 }
 
 UNION* intepret_math(NODE *tree, FRAME *enviroment)
@@ -331,7 +327,7 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
 
 UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 {
-  UNION *result = new_union(NOTHING);
+  UNION *result = new_union(0);
 
   if (tree->left->type == APPLY) {
     result = intepret_apply(enviroment, tree->left);
@@ -376,7 +372,7 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
   print_tree(tree);
 
   //Find the type of the node and do something appropriate
-  UNION *result = new_union(NOTHING);
+  UNION *result = new_union(0);
 
   switch (tree->type) {
     case RETURN:
@@ -436,13 +432,13 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
   if (tree->type = ';') {
     result = intepret_body(tree->left, enviroment);
 
-    if (result->hasreturned == 1) {
+    if ((result) && (result->hasreturned == 1)) {
       return result;
     }
 
 
     result = intepret_body(tree->right, enviroment);
-    if (result->hasreturned == 1) {
+    if ((result) && (result->hasreturned == 1)) {
       return result;
     }
   }
