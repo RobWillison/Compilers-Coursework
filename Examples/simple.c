@@ -1,9 +1,9 @@
-int times(int n, int d)
-{
-  return n * d;
+function cplus(int a) {
+  int cplusa(int b) { return a+b; }
+  return cplusa;
 }
 
 int main()
 {
-  return times(3, 2);
+  return cplus(5)(2);
 }

@@ -11,6 +11,38 @@
 #define ANSWERVALUE 254
 #define NOTHING 0
 
+void print_variable_list(VARIABLE *pointer)
+{
+  printf("LIST\n");
+  while (pointer != 0)
+  {
+
+    TOKEN *variable = (TOKEN*)pointer->token;
+    UNION *union_result = (UNION*)pointer->value;
+
+    if (union_result->type == INT) {
+      printf("%s, %d\n", variable->lexeme, union_result->value);
+    } else {
+      printf("%s, CLOSURE\n", variable->lexeme);
+    }
+    pointer = pointer->next;
+  }
+  printf("END\n");
+}
+
+void print_enviroment(FRAME *enviroment)
+{
+  while (enviroment != 0)
+  {
+    printf("NEXT ENV FRAME\n");
+    print_variable_list(enviroment->value);
+    printf("END FRAME\n");
+
+    enviroment = enviroment->next;
+  }
+  printf("END\n");
+}
+
 char *named(int t)
 {
     static char b[100];
@@ -106,20 +138,22 @@ extern TOKEN** init_symbtable(void);
 //MY STUFF
 extern UNION* intepret_body(NODE *tree, FRAME *enviroment);
 extern UNION* intepret(NODE *tree, FRAME *enviroment);
+extern UNION* interpret_definition(NODE *tree, FRAME *enviroment);
 
 UNION* new_result(int type, int value)
 {
   UNION *ans = (UNION*)malloc(sizeof(UNION));
   ans->value = value;
   ans->type = type;
+  ans->hasreturned = 0;
   return ans;
 }
 
 FRAME* new_frame()
 {
   FRAME *ans = (FRAME*)malloc(sizeof(FRAME));
-  ans->next = NULL;
-  ans->value = NULL;
+  ans->next = 0;
+  ans->value = 0;
   return ans;
 }
 
@@ -128,7 +162,7 @@ VARIABLE* new_variable(TOKEN *token, UNION *value)
   VARIABLE *ans = (VARIABLE*)malloc(sizeof(VARIABLE));
   ans->token = token;
   ans->value = value;
-  ans->next = NULL;
+  ans->next = 0;
   return ans;
 }
 
@@ -155,13 +189,13 @@ void store_variable(FRAME *enviroment, TOKEN *token, UNION *value)
     while (current->next != NULL) {
       current = (VARIABLE*)current->next;
     }
-    current->next = (VARIABLE*)&variable;
+    current->next = variable;
   }
 }
 
-UNION* lookup_variable(FRAME *enviroment, TOKEN *token)
+UNION* lookup_variable(FRAME *enviroment, TOKEN *target_token)
 {
-  //Loop Through Frames
+  //Loop Throug Frames
   while(enviroment->value != 0)
   {
     VARIABLE *pointer = (VARIABLE*)enviroment->value;
@@ -171,15 +205,15 @@ UNION* lookup_variable(FRAME *enviroment, TOKEN *token)
       UNION *result = (UNION*)pointer->value;
       TOKEN *token = (TOKEN*)pointer->token;
 
-      if (pointer->token == token)
+      if (pointer->token == target_token)
       {
         TOKEN *token = (TOKEN*)pointer->token;
 
         return pointer->value;
       }
-      pointer = &pointer->next;
+      pointer = pointer->next;
     }
-    enviroment = (FRAME*)enviroment->next;
+    enviroment = enviroment->next;
   }
 }
 
@@ -187,7 +221,6 @@ UNION* lookup_variable(FRAME *enviroment, TOKEN *token)
 UNION* intepret_condition(NODE *tree, FRAME *enviroment)
 {
   UNION *condition_result = intepret_body(tree->left, enviroment);
-
   //If its an if else
   if (tree->right->type == ELSE) {
     if(condition_result->value)
@@ -265,29 +298,73 @@ UNION* intepret_math(NODE *tree, FRAME *enviroment)
   return result;
 }
 
-FRAME *parse_arguments(NODE *arguments, NODE *values)
+VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
 {
+  if (arguments->type == '~')
+  {
 
+    TOKEN *idtoken = arguments->right->left;
+    TOKEN *typetoken = arguments->left->left;
+
+    TOKEN *valuetoken = values->left;
+
+    if (valuetoken->type == IDENTIFIER)
+    {
+      UNION *union_lookup = lookup_variable(enviroment, valuetoken);
+      UNION *arg = new_result(typetoken->type, union_lookup->value);
+      return new_variable(idtoken, arg);
+    } else if(valuetoken->type == CONSTANT) {
+      UNION *arg = new_result(typetoken->type, valuetoken->value);
+      return new_variable(idtoken, arg);
+    } else {
+      UNION *arg = intepret_body(values, enviroment);
+      return new_variable(idtoken, arg);
+    }
+
+
+
+
+  } else {
+    VARIABLE *left = parse_arguments(arguments->left, values->left, enviroment);
+    left->next = parse_arguments(arguments->right, values->right, enviroment);
+
+    return left;
+  }
 }
 
 UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 {
+  UNION *result = new_result(0,0);
+  if (tree->left->type == APPLY) {
+    result = intepret_apply(enviroment, tree->left);
+    printf("returned value %d\n", result->type);
+  } else {
+      TOKEN *token = (TOKEN*)tree->left->left;
+      result = lookup_variable(enviroment, token);
+  }
 
-  TOKEN *token = (TOKEN*)tree->left->left;
 
-  UNION *result = lookup_variable(enviroment, token);
+  printf("MORE DEBUGGING\n");
   CLOSURE *closure = result->closure;
   NODE *node = closure->ast;
 
-  print_tree(node);
   NODE *values = tree->right;
   NODE *arguments = node->left->right->right;
 
 
-  //Traverse both arguments tree
-  parse_arguments(arguments, values);
+  FRAME *new_env = new_frame();
 
-  return intepret_body(node->right, enviroment);
+  //Traverse both arguments tree
+  if (arguments != 0) {
+    VARIABLE *parsed_arguments = parse_arguments(arguments, values, enviroment);
+    new_env->value = parsed_arguments;
+  }
+
+  new_env->next = enviroment;
+
+  UNION *endresult = intepret_body(node->right, new_env);
+
+  return endresult;
 }
 
 
@@ -295,7 +372,7 @@ UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 UNION* intepret_body(NODE *tree, FRAME *enviroment)
 {
   printf("NEXT TREE\n");
-
+  print_enviroment(enviroment);
   print_tree(tree);
 
   //Find the type of the node and do something appropriate
@@ -304,7 +381,7 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
   switch (tree->type) {
     case RETURN:
       result = intepret_body(tree->left, enviroment);
-      result->type = ANSWERVALUE;
+      result->hasreturned = 1;
 
       return result;
 
@@ -335,6 +412,8 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
         store_variable(enviroment, token, result);
       }
       return;
+    case 'D':
+      return interpret_definition(tree, enviroment);
 
     case LEAF:
       if(tree->left->type == CONSTANT) {
@@ -349,22 +428,20 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
 
         UNION *stored_value = (UNION*)lookup_variable(enviroment, t);
 
-        //TODO
-        result->value = stored_value->value;
-        return result;
+        return stored_value;
       }
   }
 
   if (tree->type = ';') {
     result = intepret_body(tree->left, enviroment);
 
-    if (result->type == ANSWERVALUE) {
+    if (result->hasreturned == 1) {
       return result;
     }
 
 
     result = intepret_body(tree->right, enviroment);
-    if (result->type == ANSWERVALUE) {
+    if (result->hasreturned == 1) {
       return result;
     }
   }
@@ -372,7 +449,7 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
 
 UNION* interpret_definition(NODE *tree, FRAME *enviroment)
 {
-
+  //print_variable_list(enviroment->value);
   NODE *ast = tree;
   TOKEN *token = (TOKEN*)tree->left->right->left->left;
   NODE *arguments = tree->left->right->right;
@@ -399,10 +476,7 @@ UNION* intepret(NODE *tree, FRAME *enviroment)
     TOKEN *token = (TOKEN*)tree->left->right->left->left;
     char *funcname = token->lexeme;
 
-    printf("FOUND MAIN '%s'\n", token->lexeme);
-    //Why is there a space here    |
     if (strcmp("main", token->lexeme) == 0) {
-      print_tree(tree->right);
       UNION *result = intepret_body(tree->right, enviroment);
       return result;
     }
