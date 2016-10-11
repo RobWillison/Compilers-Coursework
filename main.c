@@ -1,12 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
-#include "nodes.h"
+#include "definitions.h"
 #include "C.tab.h"
 #include <string.h>
-#include "token.h"
-#include "union.h"
-#include "frame.h"
-#include "closure.h"
+
 
 #define ANSWERVALUE 254
 #define NOTHING 0
@@ -140,10 +138,10 @@ extern UNION* intepret_body(NODE *tree, FRAME *enviroment);
 extern UNION* intepret(NODE *tree, FRAME *enviroment);
 extern UNION* interpret_definition(NODE *tree, FRAME *enviroment);
 
-UNION* new_result(int type, int value)
+UNION* new_union(int type)
 {
   UNION *ans = (UNION*)malloc(sizeof(UNION));
-  ans->value = value;
+  ans->value = 0;
   ans->type = type;
   ans->hasreturned = 0;
   return ans;
@@ -237,7 +235,7 @@ UNION* intepret_condition(NODE *tree, FRAME *enviroment)
   }
 
   //THIS IS A BODGE
-  return new_result(NOTHING, 0);
+  return new_union(NOTHING);
 }
 
 UNION* intepret_math(NODE *tree, FRAME *enviroment)
@@ -293,7 +291,8 @@ UNION* intepret_math(NODE *tree, FRAME *enviroment)
       break;
   }
 
-  UNION *result = new_result(INT, result_value);
+  UNION *result = new_union(INT);
+  result->value = result_value;
 
   return result;
 }
@@ -302,19 +301,21 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
 {
   if (arguments->type == '~')
   {
-    TOKEN *idtoken = arguments->right->left;
-    TOKEN *typetoken = arguments->left->left;
+    TOKEN *idtoken = (TOKEN*)arguments->right->left;
+    TOKEN *typetoken = (TOKEN*)arguments->left->left;
 
-    TOKEN *valuetoken = values->left;
+    TOKEN *valuetoken = (TOKEN*)values->left;
 
     if (valuetoken->type == IDENTIFIER)
     {
       UNION *union_lookup = lookup_variable(enviroment, valuetoken);
-      UNION *arg = new_result(typetoken->type, union_lookup->value);
+      UNION *arg = new_union(typetoken->type);
+      arg->value = union_lookup->value;
       arg->closure = union_lookup->closure;
       return new_variable(idtoken, arg);
     } else if(valuetoken->type == CONSTANT) {
-      UNION *arg = new_result(typetoken->type, valuetoken->value);
+      UNION *arg = new_union(typetoken->type);
+      arg->value = valuetoken->value;
       return new_variable(idtoken, arg);
     } else {
       UNION *arg = intepret_body(values, enviroment);
@@ -330,7 +331,7 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
 
 UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 {
-  UNION *result = new_result(0,0);
+  UNION *result = new_union(NOTHING);
 
   if (tree->left->type == APPLY) {
     result = intepret_apply(enviroment, tree->left);
@@ -343,7 +344,7 @@ UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 
 
   CLOSURE *closure = result->closure;
-  NODE *node = closure->ast;
+  NODE *node = (NODE*)closure->ast;
 
   NODE *values = tree->right;
   NODE *arguments = node->left->right->right;
@@ -375,7 +376,7 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
   print_tree(tree);
 
   //Find the type of the node and do something appropriate
-  UNION *result = new_result(NOTHING, 0);
+  UNION *result = new_union(NOTHING);
 
   switch (tree->type) {
     case RETURN:
@@ -406,7 +407,8 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
       if (tree->left->left->type == INT) {
         TOKEN *token = (TOKEN*)tree->right->left;
 
-        UNION *result = new_result(INT, token->value);
+        UNION *result = new_union(INT);
+        result->value = token->value;
 
         store_variable(enviroment, token, result);
       }
@@ -455,7 +457,7 @@ UNION* interpret_definition(NODE *tree, FRAME *enviroment)
 
   CLOSURE *closure = new_closure(tree, enviroment, arguments);
 
-  UNION *function = new_result(FUNCTION, 0);
+  UNION *function = new_union(FUNCTION);
   function->closure = closure;
 
   store_variable(enviroment, token, function);

@@ -10,4 +10,4 @@ typedef struct UNION
 
 } UNION;
 
-extern UNION* new_result(int, int);
+extern UNION* new_result(int);
