@@ -2,7 +2,7 @@ import subprocess
 import glob, os
 import re
 
-expected = {'Examples/test_fact.c': 24,'Examples/test_innerfunc.c': 6, 'Examples/test_if_else.c': 8, 'Examples/test_math.c': 14, 'Examples/test_simple.c': 8, 'Examples/test_function.c': 4, 'Examples/test_function_args.c': 6}
+expected = {'Examples/test_twice.c': 22,'Examples/test_cplus.c': 7,'Examples/test_fact.c': 24,'Examples/test_innerfunc.c': 6, 'Examples/test_if_else.c': 8, 'Examples/test_math.c': 14, 'Examples/test_simple.c': 8, 'Examples/test_function.c': 4, 'Examples/test_function_args.c': 6}
 FNULL = open(os.devnull, 'w')
 
 #Test all cases

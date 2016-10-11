@@ -302,7 +302,6 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
 {
   if (arguments->type == '~')
   {
-
     TOKEN *idtoken = arguments->right->left;
     TOKEN *typetoken = arguments->left->left;
 
@@ -312,6 +311,7 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
     {
       UNION *union_lookup = lookup_variable(enviroment, valuetoken);
       UNION *arg = new_result(typetoken->type, union_lookup->value);
+      arg->closure = union_lookup->closure;
       return new_variable(idtoken, arg);
     } else if(valuetoken->type == CONSTANT) {
       UNION *arg = new_result(typetoken->type, valuetoken->value);
@@ -320,10 +320,6 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
       UNION *arg = intepret_body(values, enviroment);
       return new_variable(idtoken, arg);
     }
-
-
-
-
   } else {
     VARIABLE *left = parse_arguments(arguments->left, values->left, enviroment);
     left->next = parse_arguments(arguments->right, values->right, enviroment);
@@ -335,6 +331,7 @@ VARIABLE* parse_arguments(NODE *arguments, NODE *values, FRAME *enviroment)
 UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 {
   UNION *result = new_result(0,0);
+
   if (tree->left->type == APPLY) {
     result = intepret_apply(enviroment, tree->left);
     printf("returned value %d\n", result->type);
@@ -344,7 +341,7 @@ UNION* intepret_apply(FRAME *enviroment, NODE *tree)
   }
 
 
-  printf("MORE DEBUGGING\n");
+
   CLOSURE *closure = result->closure;
   NODE *node = closure->ast;
 
@@ -360,7 +357,9 @@ UNION* intepret_apply(FRAME *enviroment, NODE *tree)
     new_env->value = parsed_arguments;
   }
 
-  new_env->next = enviroment;
+  FRAME *defined_enviroment = closure->enviroment;
+
+  new_env->next = defined_enviroment;
 
   UNION *endresult = intepret_body(node->right, new_env);
 
@@ -372,7 +371,7 @@ UNION* intepret_apply(FRAME *enviroment, NODE *tree)
 UNION* intepret_body(NODE *tree, FRAME *enviroment)
 {
   printf("NEXT TREE\n");
-  print_enviroment(enviroment);
+
   print_tree(tree);
 
   //Find the type of the node and do something appropriate
