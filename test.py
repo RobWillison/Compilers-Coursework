@@ -7,7 +7,7 @@ FNULL = open(os.devnull, 'w')
 
 #Test all cases
 for file in glob.glob("Examples/test*"):
-    result = subprocess.call("./mycc " + file, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+    result = subprocess.call("./mycc -i " + file, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
 
     if(expected[file] != result):
         print("FAIL: " + file +" RESULT: " + str(result) + " EXPECTED: " + str(expected[file]))

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "C.tab.h"
 #include "debug.h"
+#include "TACstruct.h"
 
 #define ANSWERVALUE 254
 
@@ -72,11 +73,11 @@ void store_variable(FRAME *enviroment, TOKEN *token, UNION *value)
 
 UNION* lookup_variable(FRAME *enviroment, TOKEN *target_token)
 {
-  //Loop Throug Frames
+  //Loop Through Frames
   while(enviroment->value != 0)
   {
     VARIABLE *pointer = (VARIABLE*)enviroment->value;
-
+    //Loop through variables in frame
     while(pointer != 0)
     {
       UNION *result = (UNION*)pointer->value;
@@ -84,6 +85,7 @@ UNION* lookup_variable(FRAME *enviroment, TOKEN *target_token)
 
       if (pointer->token == target_token)
       {
+        //return value once it has been found
         TOKEN *token = (TOKEN*)pointer->token;
 
         return pointer->value;
@@ -107,7 +109,7 @@ UNION* intepret_condition(NODE *tree, FRAME *enviroment)
       return intepret_body(tree->right->right, enviroment);
     }
   }
-
+  //if it is only an if
   if(condition_result->value)
   {
     return intepret_body(tree->right, enviroment);
@@ -316,7 +318,6 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
       return result;
     }
 
-
     result = intepret_body(tree->right, enviroment);
     if ((result) && (result->hasreturned == 1)) {
       return result;
@@ -341,7 +342,6 @@ UNION* interpret_definition(NODE *tree, FRAME *enviroment)
 
 UNION* intepret(NODE *tree, FRAME *enviroment)
 {
-
   if (tree->type == '~') {
     UNION *result = intepret(tree->left, enviroment);
     if (result != 0) {
@@ -368,10 +368,15 @@ int main(int argc, char** argv)
 {
     char* fileName = "";
     NODE* tree;
+    int compileset = 0;
 
-    fileName = argv[1];
+    if (strcmp(argv[1], "-c") == 0) {
+      compileset = 1;
+    }
 
-    if (argc>2 && strcmp(argv[2],"-d")==0) yydebug = 1;
+    fileName = argv[2];
+
+    if (argc>3 && strcmp(argv[3],"-d")==0) yydebug = 1;
 
     init_symbtable();
     printf("--C COMPILER\n");
@@ -380,12 +385,22 @@ int main(int argc, char** argv)
     printf("parse finished with %p\n", tree);
     print_tree(tree);
 
-    printf("Starting Interpretation\n");
+    if (!compileset)
+    {
+      printf("Starting Interpretation\n");
 
-    FRAME *enviroment = new_frame();
-    UNION *result = (UNION*)intepret(tree, enviroment);
+      FRAME *enviroment = new_frame();
+      UNION *result = (UNION*)intepret(tree, enviroment);
 
-    printf("\nRESULT: %d\n", result->value);
+      printf("\nRESULT: %d\n", result->value);
 
-    return result->value;
+
+      return result->value;
+    } else {
+      TAC *taccode = compile(tree->right);
+      printf("COMPILED TO TAC\n");
+      print_tac(taccode);
+    }
+
+
 }
