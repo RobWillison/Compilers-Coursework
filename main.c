@@ -5,6 +5,7 @@
 #include "C.tab.h"
 #include "debug.h"
 #include "TACstruct.h"
+#include "MIPS.h"
 
 #define ANSWERVALUE 254
 
@@ -400,6 +401,9 @@ int main(int argc, char** argv)
       TAC *taccode = compile(tree->right);
       printf("COMPILED TO TAC\n");
       print_tac(taccode);
+      printf("TRANSLATE TO MIPS\n");
+      MIPS *ins = translate_tac(taccode);
+      print_mips(ins);
     }
 
 

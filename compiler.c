@@ -5,6 +5,8 @@
 #include "C.tab.h"
 #include "debug.h"
 #include "TACstruct.h"
+#include "MIPS.h"
+#include "instructionSet.h"
 
 int current_reg = 0;
 
@@ -56,9 +58,22 @@ void print_tac(TAC *tac_code)
 
     printf("%s := %s %s %s\n", get_location(destination), get_location(operand_one), named(tac_code->operation), get_location(operand_two));
   }
+}
 
+char *get_instruction(int instruction)
+{
+  switch (instruction) {
+    case LOADIMEDIATE_INS:
+      return "li";
+    case LOADWORD_INS:
+      return "lw";
+  }
+}
 
-
+void print_mips(MIPS *mips)
+{
+  if (mips->next) print_mips(mips->next);
+  printf("%s %d %d\n", get_instruction(mips->instruction), mips->destination, mips->operand_one);
 }
 
 TAC *new_tac(int destination)
@@ -74,6 +89,12 @@ LOCATION *new_location(int type)
   LOCATION *loc = (LOCATION*)malloc(sizeof(LOCATION));
   loc->type = type;
   return loc;
+}
+
+MIPS *new_mips()
+{
+  MIPS *ins = (MIPS*)malloc(sizeof(MIPS));
+  return ins;
 }
 
 LOCATION *next_reg()
@@ -149,4 +170,54 @@ TAC *compile(NODE *tree)
     case NE_OP:
       return compile_math(tree);
   }
+}
+
+int tac_reg_to_mips(LOCATION *location)
+{
+  //Look up in some hash table
+  //If not there assign new register
+  //Else get out of hash table
+
+}
+
+MIPS *tac_to_mips(TAC *tac_code)
+{
+  if (tac_code->operation == 'S')
+  {
+
+      LOCATION *operand = tac_code->operand_one;
+      LOCATION *destination = tac_code->destination;
+
+      MIPS *instruction = new_mips();
+      instruction->destination = 8; //RANDOM register choice
+      if (operand->type == LOCTOKEN)
+      {
+        TOKEN *token = operand->token;
+        if (token->type == CONSTANT)
+        {
+          instruction->instruction = LOADIMEDIATE_INS;
+          instruction->operand_one = token->value;
+        }
+      } else {
+        instruction->instruction = LOADWORD_INS;
+        instruction->operand_one = 9;
+      }
+
+      return instruction;
+  }
+}
+
+MIPS *translate_tac(TAC *tac)
+{
+  if (tac->next)
+  {
+    MIPS *current = translate_tac(tac->next);
+    MIPS *ins = tac_to_mips(tac);
+    ins->next = current;
+
+    return ins;
+  }
+
+  return tac_to_mips(tac);
+
 }
