@@ -1,4 +1,6 @@
 int main()
 {
-  return 8 + 4 / 2;
+  int x = 9;
+  int y = 3;
+  return x * y;
 }

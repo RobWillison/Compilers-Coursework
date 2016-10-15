@@ -16,4 +16,4 @@ typedef struct TAC
   struct TAC  *next;
 } TAC;
 
-extern TAC* new_tac(int destination);
+extern TAC* new_tac(LOCATION *destination);

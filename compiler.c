@@ -60,7 +60,6 @@ void print_tac(TAC *tac_code)
   if (tac_code->operation == 'S') {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
-
     printf("%s := %s\n", get_location(destination), get_location(operand_one));
   } else {
     LOCATION *destination = tac_code->destination;
@@ -121,7 +120,7 @@ void print_mips(MIPS *mips)
   }
 }
 
-TAC *new_tac(int destination)
+TAC *new_tac(LOCATION *destination)
 {
   TAC *tac_struct = (TAC*)malloc(sizeof(TAC));
   tac_struct->destination = destination;
@@ -180,17 +179,30 @@ TAC *compile_return(NODE *tree)
 
 TAC *compile_leaf(NODE *tree)
 {
-  if(tree->left->type == CONSTANT) {
-    TOKEN *t = (TOKEN *)tree->left;
-    LOCATION *loc = new_location(LOCTOKEN);
-    loc->token = t;
 
-    TAC *taccode = new_tac(next_reg());
-    taccode->operation = 'S';
-    taccode->operand_one = loc;
+  TOKEN *t = (TOKEN *)tree->left;
+  LOCATION *loc = new_location(LOCTOKEN);
+  loc->token = t;
 
-    return taccode;
-  }
+  TAC *taccode = new_tac(next_reg());
+  taccode->operation = 'S';
+  taccode->operand_one = loc;
+
+  return taccode;
+
+}
+
+TAC *compile_assignment(NODE *tree)
+{
+  LOCATION *destination = new_location(LOCTOKEN);
+  destination->token = (TOKEN*)tree->right->left->left;
+  TAC *operation = compile(tree->right->right);
+  TAC *taccode = new_tac(destination);
+  taccode->operation = 'S';
+  taccode->operand_one = operation->destination;
+
+  taccode->next = operation;
+  return taccode;
 }
 
 TAC *compile(NODE *tree)
@@ -214,15 +226,17 @@ TAC *compile(NODE *tree)
     case EQ_OP:
     case NE_OP:
       return compile_math(tree);
+    case '~':
+      return compile_assignment(tree);
   }
-}
 
-int tac_reg_to_mips(LOCATION *location)
-{
-  //Look up in some hash table
-  //If not there assign new register
-  //Else get out of hash table
-
+  if (tree->type == ';')
+  {
+    TAC *left = compile(tree->left);
+    TAC *right = compile(tree->right);
+    add_TAC_to_list(right, left);
+    return right;
+  }
 }
 
 int store_in_memory(LOCATION *tac_location)
@@ -284,6 +298,10 @@ MIPS *translate_store(TAC *tac_code)
       //Its a value do a load imediate
       load_instruction->instruction = LOADIMEDIATE_INS;
       load_instruction->operand_one = token->value;
+    } else {
+      //Its a value do a load imediate
+      load_instruction->instruction = LOADWORD_INS;
+      load_instruction->operand_one = find_in_memory(operand);
     }
   } else {
     //If its in a memory location
@@ -366,7 +384,6 @@ MIPS *translate_tac(TAC *tac)
     MIPS *current = translate_tac(tac->next);
     MIPS *ins = tac_to_mips(tac);
     add_MIPS_to_list(ins, current);
-
     return ins;
   }
 
