@@ -89,6 +89,12 @@ char *get_instruction(int instruction)
       return "div";
     case MOVE_LOW_INS:
       return "mflo";
+    case SET_LESS_THAN_INS:
+      return "sltu";
+    case XOR_IMEDIATE_INS:
+      return "xori";
+    case OR_INS:
+      return "or";
   }
 }
 
@@ -108,6 +114,8 @@ void print_mips(MIPS *mips)
       break;
     case '+':
     case '-':
+    case SET_LESS_THAN_INS:
+    case OR_INS:
       printf("%s %s %s %s\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], registers[mips->operand_two]);
       break;
     case '*':
@@ -116,6 +124,9 @@ void print_mips(MIPS *mips)
       break;
     case MOVE_LOW_INS:
       printf("%s %s\n", get_instruction(mips->instruction), registers[mips->destination]);
+      break;
+    case XOR_IMEDIATE_INS:
+      printf("%s %s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], mips->operand_two);
       break;
   }
 }
@@ -318,7 +329,7 @@ MIPS *translate_store(TAC *tac_code)
   return store_instruction;
 }
 
-translate_math(TAC *tac_code)
+MIPS *translate_math(TAC *tac_code)
 {
   //Load two operands into memory
   MIPS *load_operand_one = new_mips();
@@ -364,6 +375,140 @@ translate_math(TAC *tac_code)
   return store_instruction;
 }
 
+MIPS *translate_equality_check(TAC *tac_code)
+{
+  //Load two operands into memory
+  MIPS *load_operand_one = new_mips();
+  load_operand_one->instruction = LOADWORD_INS;
+  load_operand_one->destination = 9;
+  load_operand_one->operand_one = find_in_memory(tac_code->operand_one);
+
+  //Load two operands into registers
+  MIPS *load_operand_two = new_mips();
+  load_operand_two->instruction = LOADWORD_INS;
+  load_operand_two->destination = 10;
+  load_operand_two->operand_one = find_in_memory(tac_code->operand_two);
+  load_operand_two->next = load_operand_one;
+
+  //Subtract one from the other
+  MIPS *subract = new_mips();
+  subract->instruction = '-';
+  subract->operand_one = load_operand_one->destination;
+  subract->operand_two = load_operand_two->destination;
+  subract->destination = 8;
+  subract->next = load_operand_two;
+  //Check if the result is less than 0
+  MIPS *less_than = new_mips();
+  less_than->instruction = SET_LESS_THAN_INS;
+  less_than->operand_one = 0; //register $zero
+  less_than->operand_two = subract->destination;
+  less_than->destination = 8;
+  less_than->next = subract;
+
+  //Save the result
+  MIPS *store_instruction = new_mips();
+  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->destination = store_in_memory(tac_code->destination);
+  store_instruction->operand_one = less_than->destination;
+
+  if (tac_code->operation == EQ_OP)
+  {
+    //As this gives 0 if equal and 1 otherwise we need to flip the LSB
+    MIPS *xor = new_mips();
+    xor->instruction = XOR_IMEDIATE_INS;
+    xor->operand_one = less_than->destination;
+    xor->operand_two = 1;
+    xor->destination = 8;
+    store_instruction->operand_one = xor->destination;
+
+    xor->next = less_than;
+    store_instruction->next = xor;
+
+    return store_instruction;
+  }
+
+  //else its a !=
+  store_instruction->next = less_than;
+
+  return store_instruction;
+}
+
+MIPS *translate_logic(TAC *tac_code)
+{
+  //Load two operands into memory
+  MIPS *load_operand_one = new_mips();
+  load_operand_one->instruction = LOADWORD_INS;
+  load_operand_one->destination = 9;
+  load_operand_one->operand_one = find_in_memory(tac_code->operand_one);
+
+  //Load two operands into registers
+  MIPS *load_operand_two = new_mips();
+  load_operand_two->instruction = LOADWORD_INS;
+  load_operand_two->destination = 10;
+  load_operand_two->operand_one = find_in_memory(tac_code->operand_two);
+  load_operand_two->next = load_operand_one;
+
+  //Check which is greater than
+  MIPS *less_than = new_mips();
+  less_than->instruction = SET_LESS_THAN_INS;
+  less_than->operand_one = load_operand_one->destination;
+  less_than->operand_two = load_operand_two->destination;
+
+  //if its a greater than swap operands
+  if (tac_code->operation == '>' || tac_code->operation == GE_OP) {
+    less_than->operand_one = load_operand_two->destination;
+    less_than->operand_two = load_operand_one->destination;
+  }
+
+  less_than->destination = 8;
+  less_than->next = load_operand_two;
+
+  //Save the result
+  MIPS *store_instruction = new_mips();
+  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->destination = store_in_memory(tac_code->destination);
+  store_instruction->operand_one = less_than->destination;
+  store_instruction->next = less_than;
+
+  if (tac_code->operation == GE_OP || tac_code->operation == LE_OP)
+  {
+    tac_code->operation = EQ_OP;
+    MIPS *equality = translate_equality_check(tac_code);
+    equality = equality->next;
+    equality->destination = 9;
+    add_MIPS_to_list(equality, store_instruction);
+
+    //Load less than check
+    MIPS *load_less_than = new_mips();
+    load_less_than->instruction = LOADWORD_INS;
+    load_less_than->destination = 10;
+    load_less_than->operand_one = store_instruction->destination;
+    load_less_than->next = load_operand_one;
+    load_less_than->next = equality;
+
+    //Or the equality and less than
+    MIPS *or = new_mips();
+    or->instruction = OR_INS;
+    or->destination = 8;
+    or->operand_one = load_less_than->destination;
+    or->operand_two = equality->destination;
+    or->next = load_less_than;
+
+    //Save the result
+    MIPS *eq_store_instruction = new_mips();
+    eq_store_instruction->instruction = STOREWORD_INS;
+    eq_store_instruction->destination = store_in_memory(tac_code->destination);
+    eq_store_instruction->operand_one = or->destination;
+    eq_store_instruction->next = or;
+
+    return eq_store_instruction;
+  }
+
+
+
+  return store_instruction;
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
   switch (tac_code->operation) {
@@ -374,6 +519,14 @@ MIPS *tac_to_mips(TAC *tac_code)
     case '*':
     case '/':
       return translate_math(tac_code);
+    case EQ_OP:
+    case NE_OP:
+      return translate_equality_check(tac_code);
+    case '>':
+    case '<':
+    case LE_OP:
+    case GE_OP:
+      return translate_logic(tac_code);
   }
 }
 
