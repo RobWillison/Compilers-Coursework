@@ -9,6 +9,8 @@
 #include "instructionSet.h"
 
 int current_reg = 0;
+int current_memory = 0;
+char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t8"};
 
 #define LOCTOKEN 5
 #define LOCREG 4
@@ -73,7 +75,12 @@ char *get_instruction(int instruction)
 void print_mips(MIPS *mips)
 {
   if (mips->next) print_mips(mips->next);
-  printf("%s %d %d\n", get_instruction(mips->instruction), mips->destination, mips->operand_one);
+  switch (mips->instruction) {
+    case LOADIMEDIATE_INS:
+      printf("%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+    case STOREWORD_INS:
+      printf("%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one]);
+  }
 }
 
 TAC *new_tac(int destination)
@@ -180,30 +187,44 @@ int tac_reg_to_mips(LOCATION *location)
 
 }
 
+int get_memory_location(int size)
+{
+  int location = current_memory;
+  current_memory += size;
+  return location;
+}
+
+MIPS *translate_store(TAC *tac_code)
+{
+  LOCATION *operand = tac_code->operand_one;
+  LOCATION *destination = tac_code->destination;
+
+  MIPS *instruction = new_mips();
+  instruction->destination = 8; //RANDOM register choice
+  if (operand->type == LOCTOKEN)
+  {
+    //if its in a token i.e. value or variable
+    TOKEN *token = operand->token;
+    if (token->type == CONSTANT)
+    {
+      //Its a value do a load imediate
+      instruction->instruction = LOADIMEDIATE_INS;
+      instruction->operand_one = token->value;
+    }
+  } else {
+    //If its in a memory location
+    instruction->instruction = LOADWORD_INS;
+    instruction->operand_one = 9;
+  }
+
+  return instruction;
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
-  if (tac_code->operation == 'S')
-  {
-
-      LOCATION *operand = tac_code->operand_one;
-      LOCATION *destination = tac_code->destination;
-
-      MIPS *instruction = new_mips();
-      instruction->destination = 8; //RANDOM register choice
-      if (operand->type == LOCTOKEN)
-      {
-        TOKEN *token = operand->token;
-        if (token->type == CONSTANT)
-        {
-          instruction->instruction = LOADIMEDIATE_INS;
-          instruction->operand_one = token->value;
-        }
-      } else {
-        instruction->instruction = LOADWORD_INS;
-        instruction->operand_one = 9;
-      }
-
-      return instruction;
+  switch (tac_code->operation) {
+    case 'S':
+      return translate_store(tac_code);
   }
 }
 
