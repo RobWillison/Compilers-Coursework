@@ -5,3 +5,4 @@
 #define LOADIMEDIATE_INS 5
 #define LOADWORD_INS 6
 #define STOREWORD_INS 7
+#define MOVE_LOW_INS 8

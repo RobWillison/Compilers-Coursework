@@ -7,10 +7,12 @@
 #include "TACstruct.h"
 #include "MIPS.h"
 #include "instructionSet.h"
+#include "Memory.h"
 
 int current_reg = 0;
 int current_memory = 0;
 char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t8"};
+MEMORY *memory_env = NULL;
 
 #define LOCTOKEN 5
 #define LOCREG 4
@@ -22,6 +24,13 @@ void add_TAC_to_list(TAC *front, TAC *tail)
   while (front->next != 0) front = front->next;
   front->next = tail;
 }
+
+void add_MIPS_to_list(MIPS *front, MIPS *tail)
+{
+  while (front->next != 0) front = front->next;
+  front->next = tail;
+}
+
 
 char *get_location(LOCATION *loc)
 {
@@ -69,17 +78,46 @@ char *get_instruction(int instruction)
       return "li";
     case LOADWORD_INS:
       return "lw";
+    case STOREWORD_INS:
+      return "sw";
+    case '+':
+      return "add";
+    case '-':
+      return "sub";
+    case '*':
+      return "mult";
+    case '/':
+      return "div";
+    case MOVE_LOW_INS:
+      return "mflo";
   }
 }
 
 void print_mips(MIPS *mips)
 {
   if (mips->next) print_mips(mips->next);
+
   switch (mips->instruction) {
     case LOADIMEDIATE_INS:
       printf("%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      break;
     case STOREWORD_INS:
-      printf("%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one]);
+      printf("%s %s %d($sp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
+      break;
+    case LOADWORD_INS:
+      printf("%s %s %d($sp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      break;
+    case '+':
+    case '-':
+      printf("%s %s %s %s\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], registers[mips->operand_two]);
+      break;
+    case '*':
+    case '/':
+      printf("%s %s %s\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two]);
+      break;
+    case MOVE_LOW_INS:
+      printf("%s %s\n", get_instruction(mips->instruction), registers[mips->destination]);
+      break;
   }
 }
 
@@ -187,20 +225,56 @@ int tac_reg_to_mips(LOCATION *location)
 
 }
 
-int get_memory_location(int size)
+int store_in_memory(LOCATION *tac_location)
 {
+  int loc = 0;
+  if (tac_location->type == LOCREG) {
+    loc = tac_location->reg;
+  } else {
+    loc = tac_location->token;
+  }
+
   int location = current_memory;
-  current_memory += size;
+  current_memory += 4;
+
+  //sav in lookup table
+  MEMORY *memory = (MEMORY*)malloc(sizeof(MEMORY));
+  memory->next = memory_env;
+  memory_env = memory;
+
+  memory->mips_location = location;
+  memory->tac_location = loc;
+
   return location;
+}
+
+int find_in_memory(LOCATION *tac_location)
+{
+  int target = 0;
+  if (tac_location->type == LOCREG) {
+    target = tac_location->reg;
+  } else {
+    target = tac_location->token;
+  }
+
+  MEMORY *memory_frame = memory_env;
+  while (memory_frame != 0)
+  {
+    if (memory_frame->tac_location == target) return memory_frame->mips_location;
+    memory_frame = memory_frame->next;
+  }
 }
 
 MIPS *translate_store(TAC *tac_code)
 {
+
+  //This method loads either an imediate value or memory value and stores it to
+  //another memory location
   LOCATION *operand = tac_code->operand_one;
   LOCATION *destination = tac_code->destination;
 
-  MIPS *instruction = new_mips();
-  instruction->destination = 8; //RANDOM register choice
+  MIPS *load_instruction = new_mips();
+  load_instruction->destination = 8; //RANDOM register choice
   if (operand->type == LOCTOKEN)
   {
     //if its in a token i.e. value or variable
@@ -208,16 +282,68 @@ MIPS *translate_store(TAC *tac_code)
     if (token->type == CONSTANT)
     {
       //Its a value do a load imediate
-      instruction->instruction = LOADIMEDIATE_INS;
-      instruction->operand_one = token->value;
+      load_instruction->instruction = LOADIMEDIATE_INS;
+      load_instruction->operand_one = token->value;
     }
   } else {
     //If its in a memory location
-    instruction->instruction = LOADWORD_INS;
-    instruction->operand_one = 9;
+    load_instruction->instruction = LOADWORD_INS;
+    load_instruction->operand_one = find_in_memory(tac_code->operand_one);
   }
 
-  return instruction;
+  MIPS *store_instruction = new_mips();
+  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->destination = store_in_memory(tac_code->destination);
+  store_instruction->operand_one = load_instruction->destination;
+
+  store_instruction->next = load_instruction;
+  return store_instruction;
+}
+
+translate_math(TAC *tac_code)
+{
+  //Load two operands into memory
+  MIPS *load_operand_one = new_mips();
+  load_operand_one->instruction = LOADWORD_INS;
+  load_operand_one->destination = 9;
+  load_operand_one->operand_one = find_in_memory(tac_code->operand_one);
+
+  //Load two operands into registers
+  MIPS *load_operand_two = new_mips();
+  load_operand_two->instruction = LOADWORD_INS;
+  load_operand_two->destination = 10;
+  load_operand_two->operand_one = find_in_memory(tac_code->operand_two);
+  //Do the math operation
+  MIPS *math_instruction = new_mips();
+  math_instruction->instruction = tac_code->operation;
+  math_instruction->destination = 8;
+  math_instruction->operand_one = load_operand_one->destination;
+  math_instruction->operand_two = load_operand_two->destination;
+  //Save the result
+  MIPS *store_instruction = new_mips();
+  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->destination = store_in_memory(tac_code->destination);
+  store_instruction->operand_one = math_instruction->destination;
+
+  if ((tac_code->operation == '*') || (tac_code->operation == '/'))
+  {
+    MIPS *move_from_low = new_mips();
+    move_from_low->instruction = MOVE_LOW_INS;
+    move_from_low->destination = math_instruction->destination;
+
+    store_instruction->next = move_from_low;
+    move_from_low->next = math_instruction;
+    math_instruction->next = load_operand_two;
+    load_operand_two->next = load_operand_one;
+
+    return store_instruction;
+  }
+
+  store_instruction->next = math_instruction;
+  math_instruction->next = load_operand_two;
+  load_operand_two->next = load_operand_one;
+
+  return store_instruction;
 }
 
 MIPS *tac_to_mips(TAC *tac_code)
@@ -225,6 +351,11 @@ MIPS *tac_to_mips(TAC *tac_code)
   switch (tac_code->operation) {
     case 'S':
       return translate_store(tac_code);
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+      return translate_math(tac_code);
   }
 }
 
@@ -234,7 +365,7 @@ MIPS *translate_tac(TAC *tac)
   {
     MIPS *current = translate_tac(tac->next);
     MIPS *ins = tac_to_mips(tac);
-    ins->next = current;
+    add_MIPS_to_list(ins, current);
 
     return ins;
   }
