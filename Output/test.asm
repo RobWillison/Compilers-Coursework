@@ -30,13 +30,27 @@ add $t0 $t1 $t2
 sw $t0 24($gp)
 lw $t0 24($gp)
 sw $t0 0($gp)
+j label2
 label1:
 lw $t0 0($gp)
 sw $t0 28($gp)
-lw $ra 28($gp)
+li $t0 8
+sw $t0 32($gp)
+lw $t1 28($gp)
+lw $t2 32($gp)
+add $t0 $t1 $t2
+sw $t0 36($gp)
+lw $t0 36($gp)
+sw $t0 0($gp)
+label2:
+lw $t0 0($gp)
+sw $t0 40($gp)
+lw $ra 40($gp)
 li $v0 1
 move $a0 $ra
 syscall
+
+
 
 
 

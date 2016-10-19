@@ -118,6 +118,8 @@ char *get_instruction(int instruction)
       return "or";
     case BRANCH_EQ_INS:
       return "beq";
+    case JUMP:
+      return "j";
   }
 }
 
@@ -156,6 +158,9 @@ void print_mips(MIPS *mips)
       break;
     case LABEL:
       printf("label%d:\n", mips->operand_one);
+      break;
+    case JUMP:
+      printf("%s label%d\n", get_instruction(mips->instruction), mips->operand_one);
       break;
   }
 }
@@ -694,6 +699,16 @@ MIPS *translate_label(TAC *tac_code)
   return label_instruction;
 }
 
+MIPS *translate_jump(TAC *tac_code)
+{
+  MIPS *jump_instruction = new_mips();
+  jump_instruction->instruction = JUMP;
+  LOCATION *operand_one = tac_code->operand_one;
+  jump_instruction->operand_one = operand_one->value;
+
+  return jump_instruction;
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
   switch (tac_code->operation) {
@@ -718,6 +733,8 @@ MIPS *tac_to_mips(TAC *tac_code)
       return translate_conditional(tac_code);
     case LABEL:
       return translate_label(tac_code);
+    case JUMP:
+      return translate_jump(tac_code);
   }
 }
 
