@@ -116,6 +116,8 @@ char *get_instruction(int instruction)
       return "xori";
     case OR_INS:
       return "or";
+    case BRANCH_EQ_INS:
+      return "beq";
   }
 }
 
@@ -148,6 +150,12 @@ void print_mips(MIPS *mips)
       break;
     case XOR_IMEDIATE_INS:
       printf("%s %s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], mips->operand_two);
+      break;
+    case BRANCH_EQ_INS:
+      printf("%s %s %s label%d\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two], mips->destination);
+      break;
+    case LABEL:
+      printf("label%d:\n", mips->operand_one);
       break;
   }
 }
@@ -435,7 +443,11 @@ MIPS *translate_store(TAC *tac_code)
 
   MIPS *store_instruction = new_mips();
   store_instruction->instruction = STOREWORD_INS;
-  store_instruction->destination = store_in_memory(tac_code->destination);
+  if (destination->type == LOCTOKEN) {
+    store_instruction->destination = find_in_memory(destination);
+  } else {
+    store_instruction->destination = store_in_memory(tac_code->destination);
+  }
   store_instruction->operand_one = load_instruction->destination;
 
   store_instruction->next = load_instruction;
@@ -654,6 +666,34 @@ MIPS *translate_return(TAC *tac_code)
   return load_instruction;
 }
 
+MIPS *translate_conditional(TAC *tac_code)
+{
+  //Load two operands into registers
+  MIPS *load_operand = new_mips();
+  load_operand->instruction = LOADWORD_INS;
+  load_operand->destination = 10;
+  load_operand->operand_one = find_in_memory(tac_code->operand_one);
+
+  MIPS *branch_instruction = new_mips();
+  branch_instruction->instruction = BRANCH_EQ_INS;
+  LOCATION *label = tac_code->operand_two;
+  branch_instruction->destination = label->value;
+  branch_instruction->operand_one = load_operand->destination;
+  branch_instruction->operand_two = 0;
+  branch_instruction->next = load_operand;
+
+  return branch_instruction;
+}
+
+MIPS *translate_label(TAC *tac_code)
+{
+  MIPS *label_instruction = new_mips();
+  label_instruction->instruction = LABEL;
+  label_instruction->operand_one = tac_code->label;
+
+  return label_instruction;
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
   switch (tac_code->operation) {
@@ -674,6 +714,10 @@ MIPS *tac_to_mips(TAC *tac_code)
       return translate_logic(tac_code);
     case RETURN:
       return translate_return(tac_code);
+    case IF_NOT:
+      return translate_conditional(tac_code);
+    case LABEL:
+      return translate_label(tac_code);
   }
 }
 
