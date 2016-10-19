@@ -9,3 +9,5 @@
 #define SET_LESS_THAN_INS 9
 #define XOR_IMEDIATE_INS 10
 #define OR_INS 11
+
+#define RETURN_REG 31

@@ -71,6 +71,7 @@
 #define CONTINUE 275
 #define BREAK 276
 #define RETURN 277
+#define IF_NOT 278
 
 
 
@@ -83,6 +84,3 @@ typedef int YYSTYPE;
 #endif
 
 extern YYSTYPE yylval;
-
-
-

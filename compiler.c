@@ -10,14 +10,23 @@
 #include "Memory.h"
 
 int current_reg = 0;
+int current_label = 0;
 int current_memory = 0;
-char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t8"};
+char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 MEMORY *memory_env = NULL;
 
 #define LOCTOKEN 5
 #define LOCREG 4
+#define LABEL 3
+#define JUMP 300
 
 extern TAC *compile(NODE *tree);
+
+int get_label()
+{
+  current_label += 1;
+  return current_label;
+}
 
 void add_TAC_to_list(TAC *front, TAC *tail)
 {
@@ -61,6 +70,18 @@ void print_tac(TAC *tac_code)
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
     printf("%s := %s\n", get_location(destination), get_location(operand_one));
+  } else if (tac_code->operation == RETURN){
+    LOCATION *operand_one = tac_code->operand_one;
+    printf("RETURN %s\n", get_location(operand_one));
+  } else if (tac_code->operation == IF_NOT){
+    LOCATION *operand_one = tac_code->operand_one;
+    LOCATION *operand_two = tac_code->operand_two;
+    printf("IF NOT %s GOTO %d\n", get_location(operand_one), operand_two->value);
+  } else if (tac_code->operation == LABEL){
+    printf("LABEL %d: ", tac_code->label);
+  } else if (tac_code->operation == JUMP){
+    LOCATION *operand_one = tac_code->operand_one;
+    printf("GOTO %d\n", operand_one->value);
   } else {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
@@ -107,10 +128,10 @@ void print_mips(MIPS *mips)
       printf("%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
       break;
     case STOREWORD_INS:
-      printf("%s %s %d($sp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
+      printf("%s %s %d($gp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
       break;
     case LOADWORD_INS:
-      printf("%s %s %d($sp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      printf("%s %s %d($gp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
       break;
     case '+':
     case '-':
@@ -131,11 +152,12 @@ void print_mips(MIPS *mips)
   }
 }
 
-TAC *new_tac(LOCATION *destination)
+TAC *new_tac()
 {
   TAC *tac_struct = (TAC*)malloc(sizeof(TAC));
-  tac_struct->destination = destination;
+  tac_struct->destination = 0;
   tac_struct->next = 0;
+  tac_struct->label = 0;
   return tac_struct;
 }
 
@@ -165,7 +187,8 @@ TAC *compile_math(NODE *tree)
   TAC *operand_one = compile(tree->left);
   TAC *operand_two = compile(tree->right);
 
-  TAC *operation = new_tac(next_reg());
+  TAC *operation = new_tac();
+  operation->destination = next_reg();
   operation->operation = tree->type;
   operation->operand_one = operand_one->destination;
   operation->operand_two = operand_two->destination;
@@ -180,8 +203,8 @@ TAC *compile_return(NODE *tree)
 {
   TAC *operand_tac = compile(tree->left);
 
-  TAC *return_tac = new_tac(next_reg());
-  return_tac->operation = 'S';
+  TAC *return_tac = new_tac();
+  return_tac->operation = RETURN;
   return_tac->operand_one = operand_tac->destination;
   return_tac->next = operand_tac;
 
@@ -195,7 +218,8 @@ TAC *compile_leaf(NODE *tree)
   LOCATION *loc = new_location(LOCTOKEN);
   loc->token = t;
 
-  TAC *taccode = new_tac(next_reg());
+  TAC *taccode = new_tac();
+  taccode->destination = next_reg();
   taccode->operation = 'S';
   taccode->operand_one = loc;
 
@@ -203,17 +227,102 @@ TAC *compile_leaf(NODE *tree)
 
 }
 
-TAC *compile_assignment(NODE *tree)
+TAC *compile_declaration(NODE *tree)
 {
   LOCATION *destination = new_location(LOCTOKEN);
   destination->token = (TOKEN*)tree->right->left->left;
   TAC *operation = compile(tree->right->right);
-  TAC *taccode = new_tac(destination);
+  TAC *taccode = new_tac();
+  taccode->destination = destination;
   taccode->operation = 'S';
   taccode->operand_one = operation->destination;
 
   taccode->next = operation;
   return taccode;
+}
+
+TAC *compile_assignment(NODE *tree)
+{
+  if (tree->right->type == LEAF)
+  {
+    LOCATION *destination = new_location(LOCTOKEN);
+    destination->token = (TOKEN*)tree->left->left;
+
+    LOCATION *operand = new_location(LOCTOKEN);
+    operand->token = (TOKEN*)tree->right->left;
+
+    TAC *taccode = new_tac();
+    taccode->destination = destination;
+    taccode->operation = 'S';
+    taccode->operand_one = operand;
+
+    return taccode;
+  } else {
+    LOCATION *destination = new_location(LOCTOKEN);
+    destination->token = (TOKEN*)tree->left->left;
+
+    TAC *operation = compile(tree->right);
+
+    TAC *taccode = new_tac();
+    taccode->destination = destination;
+    taccode->operation = 'S';
+    taccode->operand_one = operation->destination;
+
+    taccode->next = operation;
+
+    return taccode;
+  }
+}
+
+TAC *compile_conditional(NODE *tree)
+{
+  TAC *condition = compile(tree->left);
+  TAC *if_statement = new_tac();
+  if_statement->operation = IF_NOT;
+  if_statement->operand_one = condition->destination;
+  LOCATION *label = new_location(LABEL);
+  label->value = get_label();
+  if_statement->operand_two = label;
+  if_statement->next = condition;
+
+  if (tree->right->type != ELSE)
+  {
+    TAC *body = compile(tree->right);
+    add_TAC_to_list(body, if_statement);
+
+    TAC *label_tac = new_tac();
+    label_tac->operation = LABEL;
+    label_tac->label = label->value;
+    label_tac->next = body;
+
+    return label_tac;
+  }
+
+  TAC *if_body = compile(tree->right->left);
+  add_TAC_to_list(if_body, if_statement);
+
+  TAC *jump_to_end = new_tac();
+  jump_to_end->operation = JUMP;
+  LOCATION *end_label = new_location(LABEL);
+  end_label->value = get_label();
+  jump_to_end->operand_one = end_label;
+  jump_to_end->next = if_body;
+
+  TAC *label_tac = new_tac();
+  label_tac->operation = LABEL;
+  label_tac->label = label->value;
+  label_tac->next = jump_to_end;
+
+  TAC *else_body = compile(tree->right->right);
+  add_TAC_to_list(else_body, label_tac);
+
+  TAC *end_label_tac = new_tac();
+  end_label_tac->operation = LABEL;
+  end_label_tac->label = end_label->value;
+  end_label_tac->next = else_body;
+
+  return end_label_tac;
+
 }
 
 TAC *compile(NODE *tree)
@@ -238,6 +347,10 @@ TAC *compile(NODE *tree)
     case NE_OP:
       return compile_math(tree);
     case '~':
+      return compile_declaration(tree);
+    case IF:
+      return compile_conditional(tree);
+    case '=':
       return compile_assignment(tree);
   }
 
@@ -509,6 +622,38 @@ MIPS *translate_logic(TAC *tac_code)
   return store_instruction;
 }
 
+MIPS *translate_return(TAC *tac_code)
+{
+  //This method loads either an imediate value or memory value and stores it to
+  //another memory location
+  LOCATION *operand = tac_code->operand_one;
+  LOCATION *destination = tac_code->destination;
+
+  MIPS *load_instruction = new_mips();
+  load_instruction->destination = RETURN_REG; //RANDOM register choice
+  if (operand->type == LOCTOKEN)
+  {
+    //if its in a token i.e. value or variable
+    TOKEN *token = operand->token;
+    if (token->type == CONSTANT)
+    {
+      //Its a value do a load imediate
+      load_instruction->instruction = LOADIMEDIATE_INS;
+      load_instruction->operand_one = token->value;
+    } else {
+      //Its a value do a load imediate
+      load_instruction->instruction = LOADWORD_INS;
+      load_instruction->operand_one = find_in_memory(operand);
+    }
+  } else {
+    //If its in a memory location
+    load_instruction->instruction = LOADWORD_INS;
+    load_instruction->operand_one = find_in_memory(tac_code->operand_one);
+  }
+
+  return load_instruction;
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
   switch (tac_code->operation) {
@@ -527,6 +672,8 @@ MIPS *tac_to_mips(TAC *tac_code)
     case LE_OP:
     case GE_OP:
       return translate_logic(tac_code);
+    case RETURN:
+      return translate_return(tac_code);
   }
 }
 

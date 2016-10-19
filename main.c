@@ -403,9 +403,9 @@ int main(int argc, char** argv)
       print_tac(taccode);
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
+      printf(".globl main\n.text\nmain:\n");
       print_mips(ins);
-
-      printf("li $v0 1\nlw $a0 %d($sp)\nsyscall\n", ins->destination);
+      printf("li $v0 1\nmove $a0 $ra\nsyscall\n", ins->destination);
     }
 
 
