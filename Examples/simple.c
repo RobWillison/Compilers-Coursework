@@ -1,10 +1,10 @@
 int main()
 {
     int x = 1;
-    if (1 > 4) {
-      x = x + 4;
-    } else if (2){
-      x = x + 2;
+
+    while (x < 4)
+    {
+      x = x + 1;
     }
 
     return x;

@@ -325,6 +325,45 @@ TAC *compile_conditional(NODE *tree)
 
 }
 
+TAC *compile_while(NODE *tree)
+{
+  TAC *jump_to_end = new_tac();
+  jump_to_end->operation = JUMP;
+  LOCATION *end_label = new_location(LABEL);
+  end_label->value = get_label();
+  jump_to_end->operand_one = end_label;
+
+  LOCATION *start_label = new_location(LABEL);
+  start_label->value = get_label();
+
+  TAC *label_start = new_tac();
+  label_start->operation = LABEL;
+  label_start->label = start_label->value;
+  label_start->next = jump_to_end;
+
+  TAC *body = compile(tree->right);
+
+  add_TAC_to_list(body, label_start);
+
+  TAC *label_end = new_tac();
+  label_end->operation = LABEL;
+  label_end->label = end_label->value;
+  label_end->next = body;
+
+  add_TAC_to_list(label_end, body);
+
+  TAC *condition = compile(tree->left);
+  add_TAC_to_list(condition, label_end);
+
+  TAC *if_statement = new_tac();
+  if_statement->operation = IF_NOT;
+  if_statement->operand_one = condition->destination;
+  if_statement->operand_two = start_label;
+  if_statement->next = condition;
+
+  return if_statement;
+}
+
 TAC *compile(NODE *tree)
 {
   printf("NEXT TREE\n");
@@ -352,6 +391,8 @@ TAC *compile(NODE *tree)
       return compile_conditional(tree);
     case '=':
       return compile_assignment(tree);
+    case WHILE:
+      return compile_while(tree);
   }
 
   if (tree->type == ';')
