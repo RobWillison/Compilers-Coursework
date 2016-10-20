@@ -8,27 +8,53 @@ main:
 
 li $t0 1
 sw $t0 0($gp)
-li $t0 3
+lw $t0 0($gp)
+sw $t0 0($gp)
+li $t0 5
 sw $t0 4($gp)
-lw $t1 0($gp)
-lw $t2 4($gp)
-add $t0 $t1 $t2
+li $t0 4
 sw $t0 8($gp)
-lw $t0 8($gp)
+lw $t1 4($gp)
+lw $t2 8($gp)
+sltu $t0 $t2 $t1
 sw $t0 12($gp)
-lw $t0 12($gp)
+lw $t2 12($gp)
+beq $t2 $zero label1
+lw $t0 0($gp)
 sw $t0 16($gp)
-li $t0 3
+li $t0 4
 sw $t0 20($gp)
 lw $t1 16($gp)
 lw $t2 20($gp)
-mult $t1 $t2
-mflo $t0
+add $t0 $t1 $t2
 sw $t0 24($gp)
-lw $ra 24($gp)
+lw $t0 24($gp)
+sw $t0 0($gp)
+j label2
+label1:
+lw $t0 0($gp)
+sw $t0 28($gp)
+li $t0 8
+sw $t0 32($gp)
+lw $t1 28($gp)
+lw $t2 32($gp)
+add $t0 $t1 $t2
+sw $t0 36($gp)
+lw $t0 36($gp)
+sw $t0 0($gp)
+label2:
+lw $t0 0($gp)
+sw $t0 40($gp)
+lw $ra 40($gp)
 li $v0 1
 move $a0 $ra
 syscall
+
+
+
+
+
+
 
 
 li $v0, 10 # Sets $v0 to "10" to select exit syscall
