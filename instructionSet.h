@@ -10,5 +10,6 @@
 #define XOR_IMEDIATE_INS 10
 #define OR_INS 11
 #define BRANCH_EQ_INS 12
+#define BRANCH_NEQ_INS 13
 
 #define RETURN_REG 31

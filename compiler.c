@@ -77,6 +77,10 @@ void print_tac(TAC *tac_code)
     LOCATION *operand_one = tac_code->operand_one;
     LOCATION *operand_two = tac_code->operand_two;
     printf("IF NOT %s GOTO %d\n", get_location(operand_one), operand_two->value);
+  } else if (tac_code->operation == IF){
+    LOCATION *operand_one = tac_code->operand_one;
+    LOCATION *operand_two = tac_code->operand_two;
+    printf("IF %s GOTO %d\n", get_location(operand_one), operand_two->value);
   } else if (tac_code->operation == LABEL){
     printf("LABEL %d: ", tac_code->label);
   } else if (tac_code->operation == JUMP){
@@ -118,6 +122,8 @@ char *get_instruction(int instruction)
       return "or";
     case BRANCH_EQ_INS:
       return "beq";
+    case BRANCH_NEQ_INS:
+      return "bne";
     case JUMP:
       return "j";
   }
@@ -154,6 +160,7 @@ void print_mips(MIPS *mips)
       printf("%s %s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], mips->operand_two);
       break;
     case BRANCH_EQ_INS:
+    case BRANCH_NEQ_INS:
       printf("%s %s %s label%d\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two], mips->destination);
       break;
     case LABEL:
@@ -363,13 +370,12 @@ TAC *compile_while(NODE *tree)
   label_end->label = end_label->value;
   label_end->next = body;
 
-  add_TAC_to_list(label_end, body);
 
   TAC *condition = compile(tree->left);
   add_TAC_to_list(condition, label_end);
 
   TAC *if_statement = new_tac();
-  if_statement->operation = IF_NOT;
+  if_statement->operation = IF;
   if_statement->operand_one = condition->destination;
   if_statement->operand_two = start_label;
   if_statement->next = condition;
@@ -380,7 +386,6 @@ TAC *compile_while(NODE *tree)
 TAC *compile(NODE *tree)
 {
   printf("NEXT TREE\n");
-  print_tree(tree);
 
   switch (tree->type) {
     case RETURN:
@@ -412,6 +417,7 @@ TAC *compile(NODE *tree)
   {
     TAC *left = compile(tree->left);
     TAC *right = compile(tree->right);
+
     add_TAC_to_list(right, left);
     return right;
   }
@@ -721,7 +727,13 @@ MIPS *translate_conditional(TAC *tac_code)
   load_operand->operand_one = find_in_memory(tac_code->operand_one);
 
   MIPS *branch_instruction = new_mips();
-  branch_instruction->instruction = BRANCH_EQ_INS;
+
+  if (tac_code->operation == IF_NOT) {
+    branch_instruction->instruction = BRANCH_EQ_INS;
+  } else {
+    branch_instruction->instruction = BRANCH_NEQ_INS;
+  }
+
   LOCATION *label = tac_code->operand_two;
   branch_instruction->destination = label->value;
   branch_instruction->operand_one = load_operand->destination;
@@ -771,6 +783,7 @@ MIPS *tac_to_mips(TAC *tac_code)
     case RETURN:
       return translate_return(tac_code);
     case IF_NOT:
+    case IF:
       return translate_conditional(tac_code);
     case LABEL:
       return translate_label(tac_code);

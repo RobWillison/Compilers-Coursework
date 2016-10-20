@@ -10,45 +10,38 @@ li $t0 1
 sw $t0 0($gp)
 lw $t0 0($gp)
 sw $t0 0($gp)
-li $t0 5
+j label1
+label2:
+lw $t0 0($gp)
 sw $t0 4($gp)
-li $t0 4
+li $t0 3
 sw $t0 8($gp)
 lw $t1 4($gp)
 lw $t2 8($gp)
-sltu $t0 $t2 $t1
+mult $t1 $t2
+mflo $t0
 sw $t0 12($gp)
-lw $t2 12($gp)
-beq $t2 $zero label1
+lw $t0 12($gp)
+sw $t0 0($gp)
+label1:
 lw $t0 0($gp)
 sw $t0 16($gp)
 li $t0 4
 sw $t0 20($gp)
 lw $t1 16($gp)
 lw $t2 20($gp)
-add $t0 $t1 $t2
+sltu $t0 $t2 $t1
 sw $t0 24($gp)
-lw $t0 24($gp)
-sw $t0 0($gp)
-j label2
-label1:
+lw $t2 24($gp)
+bne $t2 $zero label2
 lw $t0 0($gp)
 sw $t0 28($gp)
-li $t0 8
-sw $t0 32($gp)
-lw $t1 28($gp)
-lw $t2 32($gp)
-add $t0 $t1 $t2
-sw $t0 36($gp)
-lw $t0 36($gp)
-sw $t0 0($gp)
-label2:
-lw $t0 0($gp)
-sw $t0 40($gp)
-lw $ra 40($gp)
+lw $ra 28($gp)
 li $v0 1
 move $a0 $ra
 syscall
+
+
 
 
 
