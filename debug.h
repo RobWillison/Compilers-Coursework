@@ -1,13 +1,16 @@
-#include "definitions.h"
 
-void print_variable_list(VARIABLE *pointer);
+extern void print_variable_list(VARIABLE *pointer);
 
-void print_enviroment(FRAME *enviroment);
+extern void print_enviroment(FRAME *enviroment);
 
-char *named(int t);
+extern char *named(int t);
 
-void print_leaf(NODE *tree, int level);
+extern void print_leaf(NODE *tree, int level);
 
-void print_tree0(NODE *tree, int level);
+extern void print_tree0(NODE *tree, int level);
 
-void print_tree(NODE *tree);
+extern void print_tree(NODE *tree);
+
+extern void print_tac(TAC *tac);
+
+extern void print_mips(MIPS *mips, FILE *file);

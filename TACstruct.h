@@ -1,3 +1,8 @@
+#define LOCTOKEN 5
+#define LOCREG 4
+#define LABEL 3
+#define FUNCTION_DEF 6
+
 typedef struct LOCATION
 {
   int   type;

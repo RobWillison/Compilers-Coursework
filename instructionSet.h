@@ -11,5 +11,6 @@
 #define OR_INS 11
 #define BRANCH_EQ_INS 12
 #define BRANCH_NEQ_INS 13
+#define SYSCALL 14
 
 #define RETURN_REG 31

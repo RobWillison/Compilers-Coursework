@@ -3,9 +3,11 @@
 #include <ctype.h>
 #include <string.h>
 #include "C.tab.h"
-#include "debug.h"
 #include "TACstruct.h"
 #include "MIPS.h"
+#include "definitions.h"
+#include "tac_compiler.h"
+#include "debug.h"
 
 #define ANSWERVALUE 254
 
@@ -398,12 +400,11 @@ int main(int argc, char** argv)
 
       return result->value;
     } else {
-      TAC *taccode = compile(tree->right);
+      TAC *taccode = compile(tree);
       printf("COMPILED TO TAC\n");
       print_tac(taccode);
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
-
       //This will need to change when functions are implemented
       FILE *file = fopen("Output/test.asm", "w");
       fprintf(file, ".globl main\n\n.text\n\nmain:\n");

@@ -4,6 +4,9 @@
 #include "definitions.h"
 #include "C.tab.h"
 #include <string.h>
+#include "TACstruct.h"
+#include "MIPS.h"
+#include "instructionSet.h"
 
 void print_variable_list(VARIABLE *pointer)
 {
@@ -122,4 +125,89 @@ void print_tree0(NODE *tree, int level)
 void print_tree(NODE *tree)
 {
     print_tree0(tree, 0);
+}
+
+void print_tac(TAC *tac_code)
+{
+
+  if (tac_code == 0) return;
+
+  print_tac(tac_code->next);
+
+  if (tac_code->operation == 'S') {
+    LOCATION *destination = tac_code->destination;
+    LOCATION *operand_one = tac_code->operand_one;
+    printf("%s := %s\n", get_location(destination), get_location(operand_one));
+  } else if (tac_code->operation == RETURN){
+    LOCATION *operand_one = tac_code->operand_one;
+    printf("RETURN %s\n", get_location(operand_one));
+  } else if (tac_code->operation == IF_NOT){
+    LOCATION *operand_one = tac_code->operand_one;
+    LOCATION *operand_two = tac_code->operand_two;
+    printf("IF NOT %s GOTO %d\n", get_location(operand_one), operand_two->value);
+  } else if (tac_code->operation == IF){
+    LOCATION *operand_one = tac_code->operand_one;
+    LOCATION *operand_two = tac_code->operand_two;
+    printf("IF %s GOTO %d\n", get_location(operand_one), operand_two->value);
+  } else if (tac_code->operation == LABEL){
+    printf("LABEL %d: ", tac_code->label);
+  } else if (tac_code->operation == JUMP){
+    LOCATION *operand_one = tac_code->operand_one;
+    printf("GOTO %d\n", operand_one->value);
+  } else if (tac_code->operation == FUNCTION_DEF){
+
+  } else {
+    LOCATION *destination = tac_code->destination;
+    LOCATION *operand_one = tac_code->operand_one;
+    LOCATION *operand_two = tac_code->operand_two;
+
+    printf("%s := %s %s %s\n", get_location(destination), get_location(operand_one), named(tac_code->operation), get_location(operand_two));
+  }
+}
+
+void print_mips(MIPS *mips, FILE *file)
+{
+  if (!file)
+  {
+    file = stdout;
+  }
+  if (mips->next) print_mips(mips->next, file);
+
+  switch (mips->instruction) {
+    case LOADIMEDIATE_INS:
+      fprintf(file, "%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      break;
+    case STOREWORD_INS:
+      fprintf(file, "%s %s %d($gp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
+      break;
+    case LOADWORD_INS:
+      fprintf(file, "%s %s %d($gp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      break;
+    case '+':
+    case '-':
+    case SET_LESS_THAN_INS:
+    case OR_INS:
+      fprintf(file, "%s %s %s %s\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], registers[mips->operand_two]);
+      break;
+    case '*':
+    case '/':
+      fprintf(file, "%s %s %s\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two]);
+      break;
+    case MOVE_LOW_INS:
+      fprintf(file, "%s %s\n", get_instruction(mips->instruction), registers[mips->destination]);
+      break;
+    case XOR_IMEDIATE_INS:
+      fprintf(file, "%s %s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], mips->operand_two);
+      break;
+    case BRANCH_EQ_INS:
+    case BRANCH_NEQ_INS:
+      fprintf(file, "%s %s %s label%d\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two], mips->destination);
+      break;
+    case LABEL:
+      fprintf(file, "label%d:\n", mips->operand_one);
+      break;
+    case JUMP:
+      fprintf(file, "%s label%d\n", get_instruction(mips->instruction), mips->operand_one);
+      break;
+  }
 }
