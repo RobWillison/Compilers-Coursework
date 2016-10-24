@@ -270,12 +270,31 @@ TAC *compile_funcion_def(NODE *tree)
   function->operand_one = location;
 
   TAC *body = compile(tree->right);
-  add_TAC_to_list(body, function);
 
   int locals = count_locals(body);
+  LOCATION *loc_local = new_location(INT);
+  loc_local->value = locals;
   int tempories = count_tempories(body);
-  int arguments = 0;
+  LOCATION *loc_temp = new_location(INT);
+  loc_temp->value = tempories;
   //TODO arguments
+  int arguments = 0;
+  LOCATION *loc_args = new_location(INT);
+  loc_args->value = arguments;
+
+  TAC *frame = new_tac();
+  frame->operation = NEWFRAME;
+  frame->destination = loc_args;
+  frame->operand_one = loc_local;
+  frame->operand_two = loc_temp;
+
+  add_TAC_to_list(body, frame);
+  frame->next = function;
+
+  //function->next = frame;
+
+
+
 
   return body;
 }
