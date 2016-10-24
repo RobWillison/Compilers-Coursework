@@ -232,8 +232,37 @@ TAC *compile_while(NODE *tree)
   return if_statement;
 }
 
+int count_locals(TAC *tac_code)
+{
+  int count = 0;
+  while (tac_code)
+  {
+    LOCATION *destination = tac_code->destination;
+
+    if ((destination) && (destination->type == LOCTOKEN)) count += 1;
+    tac_code = tac_code->next;
+  }
+
+  return count;
+}
+
+int count_tempories(TAC *tac_code)
+{
+  int count = 0;
+  while (tac_code)
+  {
+    LOCATION *destination = tac_code->destination;
+
+    if ((destination) && (destination->type == LOCREG)) count += 1;
+    tac_code = tac_code->next;
+  }
+
+  return count;
+}
+
 TAC *compile_funcion_def(NODE *tree)
 {
+
   TAC *function = new_tac();
   function->operation = FUNCTION_DEF;
   LOCATION *location = new_location(LOCTOKEN);
@@ -241,9 +270,14 @@ TAC *compile_funcion_def(NODE *tree)
   function->operand_one = location;
 
   TAC *body = compile(tree->right);
-  function->next = body;
+  add_TAC_to_list(body, function);
 
-  return function;
+  int locals = count_locals(body);
+  int tempories = count_tempories(body);
+  int arguments = 0;
+  //TODO arguments
+
+  return body;
 }
 
 TAC *compile(NODE *tree)

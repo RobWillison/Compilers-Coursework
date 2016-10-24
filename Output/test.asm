@@ -6,7 +6,6 @@ main:
 li $t0 8
 sw $t0 0($gp)
 lw $ra 0($gp)
-lw $ra 0($gp)
 
 
 li $v0 1

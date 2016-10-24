@@ -429,7 +429,7 @@ MIPS *tac_to_mips(TAC *tac_code)
     case JUMP:
       return translate_jump(tac_code);
     case FUNCTION_DEF:
-      return tac_to_mips(tac_code->next);
+      return NULL;
   }
 }
 

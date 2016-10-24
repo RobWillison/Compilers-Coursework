@@ -155,7 +155,9 @@ void print_tac(TAC *tac_code)
     LOCATION *operand_one = tac_code->operand_one;
     printf("GOTO %d\n", operand_one->value);
   } else if (tac_code->operation == FUNCTION_DEF){
-
+    LOCATION *location = tac_code->operand_one;
+    TOKEN *function = location->token;
+    printf("%s:\n", function->lexeme);
   } else {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
