@@ -1,9 +1,9 @@
-#define LOCTOKEN 5
-#define LOCREG 4
+#define LOCTOKEN 5000
+#define LOCREG 4000
 
-#define LABEL 3
-#define FUNCTION_DEF 6
-#define NEWFRAME 7
+#define LABEL 3000
+#define FUNCTION_DEF 6000
+#define NEWFRAME 7000
 
 typedef struct LOCATION
 {

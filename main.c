@@ -407,9 +407,9 @@ int main(int argc, char** argv)
       MIPS *ins = translate_tac(taccode);
       //This will need to change when functions are implemented
       FILE *file = fopen("Output/test.asm", "w");
-      fprintf(file, ".globl main\n\n.text\n\nmain:\n");
+      fprintf(file, ".globl main\n\n.text\n\n");
       print_mips(ins, file);
-      fprintf(file, "\n\nli $v0 1\nmove $a0 $ra\nsyscall\n\nli $v0, 10\nsyscall\n\n.data\n", ins->destination);
+      fprintf(file, "\n\nli $v0 1\nmove $a0 $ra\nsyscall\n\nli $v0, 10\nsyscall\n\n.data\n");
 
     }
 

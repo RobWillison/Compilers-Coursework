@@ -217,5 +217,8 @@ void print_mips(MIPS *mips, FILE *file)
     case JUMP:
       fprintf(file, "%s label%d\n", get_instruction(mips->instruction), mips->operand_one);
       break;
+    case FUNCTION_DEF:
+      fprintf(file, "main:\n");
+      break;
   }
 }

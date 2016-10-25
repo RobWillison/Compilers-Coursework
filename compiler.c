@@ -391,6 +391,15 @@ MIPS *translate_label(TAC *tac_code)
   return label_instruction;
 }
 
+MIPS *translate_function_def(TAC *tac_code)
+{
+  MIPS *label_instruction = new_mips();
+  label_instruction->instruction = FUNCTION_DEF;
+  label_instruction->operand_one = tac_code->label;
+
+  return label_instruction;
+}
+
 MIPS *translate_jump(TAC *tac_code)
 {
   MIPS *jump_instruction = new_mips();
@@ -429,7 +438,9 @@ MIPS *tac_to_mips(TAC *tac_code)
     case JUMP:
       return translate_jump(tac_code);
     case FUNCTION_DEF:
-      return NULL;
+      return translate_function_def(tac_code);
+    case NEWFRAME:
+      return new_tac();
   }
 }
 
