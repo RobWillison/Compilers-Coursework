@@ -437,11 +437,17 @@ MIPS *translate_return(TAC *tac_code)
   load_return_address->destination = 8;
   load_return_address->operand_one = 4;
   load_return_address->next = load_instruction;
+  //Move the $fp to the previous of the current $fp
+  MIPS *restore_previous_frame = new_mips();
+  restore_previous_frame->instruction = LOADWORD_INS;
+  restore_previous_frame->destination = 30;
+  restore_previous_frame->operand_one = 0;//prev frame pointer
+  restore_previous_frame->next = load_return_address;
   //jump to the value
   MIPS *jump_to_return = new_mips();
   jump_to_return->instruction = JUMP_REG;
   jump_to_return->destination = 8;
-  jump_to_return->next = load_return_address;
+  jump_to_return->next = restore_previous_frame;
 
   return jump_to_return;
 }
