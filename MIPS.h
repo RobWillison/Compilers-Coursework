@@ -1,6 +1,8 @@
 #define JUMP 300
 #define JUMPTOFUNC 301
 #define JUMPTOADDRS 302
+#define PARAMETER_ALLOCATE 303
+#define SAVE_PARAM 304
 
 typedef struct MIPS
 {

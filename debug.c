@@ -190,6 +190,12 @@ void print_tac(TAC *tac_code)
     LOCATION *tempories = tac_code->operand_two;
 
     printf("NEW FRAME %d arg %d loc %d temp\n", arguments->value, locals->value, tempories->value);
+  } else if (tac_code->operation == PARAMETER_ALLOCATE){
+    LOCATION *paramenter_count = tac_code->operand_one;
+
+    printf("ALLOCATE PARAMS %d\n", paramenter_count->value);
+  } else if (tac_code->operation == SAVE_PARAM){
+    printf("SAVE PARAM %s\n", get_location(tac_code->operand_one));
   } else {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
@@ -211,8 +217,11 @@ void print_mips(MIPS *mips, FILE *file)
     case LOADIMEDIATE_INS:
       fprintf(file, "%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
       break;
-    case STOREWORD_INS:
+    case STOREWORD_FP:
       fprintf(file, "%s %s %d($fp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
+      break;
+    case STOREWORD_REG:
+      fprintf(file, "%s %s 0(%s)\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->destination]);
       break;
     case LOADWORD_INS:
       fprintf(file, "%s %s %d($fp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
@@ -233,6 +242,7 @@ void print_mips(MIPS *mips, FILE *file)
       fprintf(file, "%s %s\n", get_instruction(mips->instruction), registers[mips->destination]);
       break;
     case XOR_IMEDIATE_INS:
+    case ADD_IM:
       fprintf(file, "%s %s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operand_one], mips->operand_two);
       break;
     case BRANCH_EQ_INS:

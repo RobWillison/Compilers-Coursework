@@ -1,9 +1,9 @@
-int test()
+int test(int x)
 {
-  return 5;
+  return x;
 }
 
 int main()
 {
-    return test();
+  return test(6);
 }

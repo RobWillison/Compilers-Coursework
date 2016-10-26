@@ -260,6 +260,23 @@ int count_tempories(TAC *tac_code)
   return count;
 }
 
+int count_arguments(NODE *tree)
+{
+  int count = 0;
+  if (tree)
+  {
+    if (tree->type == '~')
+    {
+      count = count + 1;
+    } else {
+      count = count + count_arguments(tree->right);
+      count = count + count_arguments(tree->left);
+    }
+  }
+
+  return count;
+}
+
 TAC *compile_funcion_def(NODE *tree)
 {
 
@@ -277,8 +294,7 @@ TAC *compile_funcion_def(NODE *tree)
   int tempories = count_tempories(body);
   LOCATION *loc_temp = new_location(INT);
   loc_temp->value = tempories;
-  //TODO arguments
-  int arguments = 0;
+  int arguments = count_arguments(tree->left->right->right);
   LOCATION *loc_args = new_location(INT);
   loc_args->value = arguments;
 
@@ -301,8 +317,65 @@ TAC *compile_funcion_def(NODE *tree)
   return return_tac;
 }
 
+int count_parameters(NODE *tree)
+{
+  if (!tree) return 0;
+  int count = 0;
+  if (tree->type == LEAF)
+  {
+    count = count + 1;
+  } else {
+    count = count + count_parameters(tree->left);
+    count = count + count_parameters(tree->right);
+  }
+
+  return count;
+}
+
+TAC *save_parameters(NODE *tree)
+{
+  if (!tree) return 0;
+  int count = 0;
+  if (tree->type == LEAF)
+  {
+    TAC *get_param = compile(tree);
+    TAC *save_param = new_tac();
+    save_param->operation = SAVE_PARAM;
+    save_param->operand_one = get_param->destination;
+    add_TAC_to_list(save_param, get_param);
+    return save_param;
+  } else {
+    TAC *left_param = save_parameters(tree->left);
+    TAC *right_param = save_parameters(tree->right);
+    add_TAC_to_list(right_param, left_param);
+    return right_param;
+  }
+
+  return count;
+}
+
+TAC *store_paraments(NODE *tree)
+{
+  TAC *parameter_setup = new_tac();
+  parameter_setup->operation = PARAMETER_ALLOCATE;
+  LOCATION *param_count = new_location(LOCVALUE);
+  param_count->value = count_parameters(tree);
+  parameter_setup->operand_one = param_count;
+
+  TAC *parameters = save_parameters(tree);
+  add_TAC_to_list(parameters, parameter_setup);
+
+  return parameters;
+}
+
 TAC *compile_apply(NODE *tree)
 {
+  TAC *parameters = store_paraments(tree->right);
+  //Allocate those bytes
+  //Put values in
+  //Put address in $a0
+  //Put length in $a1
+
   TAC *jump_to_func = new_tac();
   jump_to_func->operation = JUMPTOFUNC;
   LOCATION *func_loc = new_location(LOCTOKEN);
@@ -311,7 +384,7 @@ TAC *compile_apply(NODE *tree)
   LOCATION *return_reg = new_location(LOCREG);
   return_reg->reg = RETURN_REG;
   jump_to_func->destination = return_reg;
-
+  jump_to_func->next = parameters;
   return jump_to_func;
 }
 

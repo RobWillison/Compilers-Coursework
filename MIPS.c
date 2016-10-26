@@ -13,7 +13,8 @@ char *get_instruction(int instruction)
       return "li";
     case LOADWORD_INS:
       return "lw";
-    case STOREWORD_INS:
+    case STOREWORD_FP:
+    case STOREWORD_REG:
       return "sw";
     case '+':
       return "add";
@@ -43,5 +44,7 @@ char *get_instruction(int instruction)
       return "move";
     case JUMP_REG:
       return "jr";
+    case ADD_IM:
+      return "addi";
   }
 }

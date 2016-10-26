@@ -1,5 +1,6 @@
 #define LOCTOKEN 5000
 #define LOCREG 4000
+#define LOCVALUE 6000
 
 #define LABEL 3000
 #define FUNCTION_DEF 6000

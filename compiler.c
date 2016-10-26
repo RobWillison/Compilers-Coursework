@@ -146,14 +146,14 @@ MIPS *create_activation_record(TAC *tac_code)
 
   //Change prev value to that in $fp
   MIPS *store_instruction = new_mips();
-  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->instruction = STOREWORD_FP;
   store_instruction->destination = 0;//First space in record (Previous)
   store_instruction->operand_one = 8;//$fp temp
   store_instruction->next = move_frame_pointer;
 
   //Store the $ra in the 2nd place in the frame
   MIPS *save_return = new_mips();
-  save_return->instruction = STOREWORD_INS;
+  save_return->instruction = STOREWORD_FP;
   save_return->destination = 4;//Second space in record
   save_return->operand_one = 31;//$ra
   save_return->next = store_instruction;
@@ -191,7 +191,7 @@ MIPS *translate_store(TAC *tac_code)
   }
 
   MIPS *store_instruction = new_mips();
-  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->instruction = STOREWORD_FP;
   if (destination->type == LOCTOKEN) {
     store_instruction->destination = find_in_memory(destination);
     if (store_instruction->destination == -1)
@@ -228,7 +228,7 @@ MIPS *translate_math(TAC *tac_code)
   math_instruction->operand_two = load_operand_two->destination;
 
   MIPS *store_instruction = new_mips();
-  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->instruction = STOREWORD_FP;
   //Save the result
   int destination_register = find_in_memory(tac_code->destination);
   if (destination_register != -1) {
@@ -292,7 +292,7 @@ MIPS *translate_equality_check(TAC *tac_code)
 
   //Save the result
   MIPS *store_instruction = new_mips();
-  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->instruction = STOREWORD_FP;
   store_instruction->destination = store_in_memory(tac_code->destination);
   store_instruction->operand_one = less_than->destination;
 
@@ -350,7 +350,7 @@ MIPS *translate_logic(TAC *tac_code)
 
   //Save the result
   MIPS *store_instruction = new_mips();
-  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->instruction = STOREWORD_FP;
   store_instruction->destination = store_in_memory(tac_code->destination);
   store_instruction->operand_one = less_than->destination;
   store_instruction->next = less_than;
@@ -381,7 +381,7 @@ MIPS *translate_logic(TAC *tac_code)
 
     //Save the result
     MIPS *eq_store_instruction = new_mips();
-    eq_store_instruction->instruction = STOREWORD_INS;
+    eq_store_instruction->instruction = STOREWORD_FP;
     eq_store_instruction->destination = store_in_memory(tac_code->destination);
     eq_store_instruction->operand_one = or->destination;
     eq_store_instruction->next = or;
@@ -517,6 +517,60 @@ MIPS *translate_jump_to_func(TAC *tac_code)
   return jump_instruction;
 }
 
+MIPS *allocate_space_for_params(TAC *tac_code)
+{
+  LOCATION *paramenter_count = tac_code->operand_one;
+  int bytes_needed = paramenter_count->value * 4;
+
+  MIPS *bytes = new_mips();
+  bytes->instruction = LOADIMEDIATE_INS;
+  bytes->destination = 4;
+  bytes->operand_one = bytes_needed;
+
+  MIPS *allocate = new_mips();
+  allocate->instruction = LOADIMEDIATE_INS;
+  allocate->destination = 2;
+  allocate->operand_one = 9;
+  allocate->next = bytes;
+
+  MIPS *syscall = new_mips();
+  syscall->instruction = SYSCALL;
+  syscall->next = allocate;
+
+  MIPS *save_pointer = new_mips();
+  save_pointer->instruction = MOVE;
+  save_pointer->operand_two = 2;
+  save_pointer->operand_one = 9;
+  save_pointer->next = syscall;
+
+  return save_pointer;
+}
+
+MIPS *put_param_in_memory(TAC *tac_code)
+{
+  //load values
+  MIPS *load_operand_one = new_mips();
+  load_operand_one->instruction = LOADWORD_INS;
+  load_operand_one->destination = 8;
+  load_operand_one->operand_one = find_in_memory(tac_code->operand_one);
+  //save in space
+  MIPS *store_instruction = new_mips();
+  store_instruction->instruction = STOREWORD_REG;
+
+  store_instruction->destination = 9;
+  store_instruction->operand_one = 8;//$fp temp
+  store_instruction->next = load_operand_one;
+  //increment space pointer
+  MIPS *increment_pointer = new_mips();
+  increment_pointer->instruction = ADD_IM;
+  increment_pointer->destination = 9;
+  increment_pointer->operand_one = 9;
+  increment_pointer->operand_two = 4;
+  increment_pointer->next = store_instruction;
+
+  return increment_pointer;
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
   switch (tac_code->operation) {
@@ -550,6 +604,10 @@ MIPS *tac_to_mips(TAC *tac_code)
       return translate_function_def(tac_code);
     case NEWFRAME:
       return create_activation_record(tac_code);
+    case PARAMETER_ALLOCATE:
+      return allocate_space_for_params(tac_code);
+    case SAVE_PARAM:
+      return put_param_in_memory(tac_code);
   }
 }
 
