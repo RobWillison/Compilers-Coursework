@@ -10,8 +10,7 @@
 #include "definitions.h"
 #include "debug.h"
 
-int current_memory = 0;
-MEMORY *memory_env = NULL;
+FRAME *memory_env = NULL;
 
 void add_MIPS_to_list(MIPS *front, MIPS *tail)
 {
@@ -25,6 +24,33 @@ MIPS *new_mips()
   return ins;
 }
 
+UNION* new_union(int type)
+{
+  UNION *ans = (UNION*)malloc(sizeof(UNION));
+  ans->value = 0;
+  ans->type = type;
+  ans->hasreturned = 0;
+  return ans;
+}
+
+FRAME* new_frame()
+{
+  FRAME *ans = (FRAME*)malloc(sizeof(FRAME));
+  ans->next = 0;
+  ans->value = 0;
+  ans->memory = 0;
+  return ans;
+}
+
+VARIABLE* new_variable(TOKEN *token, UNION *value)
+{
+  VARIABLE *ans = (VARIABLE*)malloc(sizeof(VARIABLE));
+  ans->token = token;
+  ans->value = value;
+  ans->next = 0;
+  return ans;
+}
+
 int store_in_memory(LOCATION *tac_location)
 {
   int loc = 0;
@@ -34,18 +60,23 @@ int store_in_memory(LOCATION *tac_location)
     loc = tac_location->token;
   }
 
-  int location = current_memory;
-  current_memory += 4;
-
   //sav in lookup table
   MEMORY *memory = (MEMORY*)malloc(sizeof(MEMORY));
-  memory->next = memory_env;
-  memory_env = memory;
-
-  memory->mips_location = location;
   memory->tac_location = loc;
 
-  return location;
+  if(memory_env->memory == NULL){
+    memory_env->memory = memory;
+    memory->mips_location = 12;
+  } else {
+    MEMORY *current = (MEMORY*)memory_env->memory;
+    while (current->next != NULL) {
+      current = (MEMORY*)current->next;
+    }
+    memory->mips_location = current->mips_location + 4;
+    current->next = memory;
+  }
+
+  return memory->mips_location;
 }
 
 int find_in_memory(LOCATION *tac_location)
@@ -57,21 +88,31 @@ int find_in_memory(LOCATION *tac_location)
     target = tac_location->token;
   }
 
-  MEMORY *memory_frame = memory_env;
-  while (memory_frame != 0)
+  FRAME *env_frame = memory_env;
+  while (env_frame)
   {
-    if (memory_frame->tac_location == target) return memory_frame->mips_location;
-    memory_frame = memory_frame->next;
+    MEMORY *memory_frame = env_frame->memory;
+    while (memory_frame != 0)
+    {
+      if (memory_frame->tac_location == target) return memory_frame->mips_location;
+      memory_frame = memory_frame->next;
+    }
+    env_frame = env_frame->next;
   }
+
 
   return -1;
 }
 
-MIPS *create_activation_record(int args, int locals, int tempories)
+MIPS *create_activation_record(TAC *tac_code)
 {
+  int args = ((LOCATION*)tac_code->destination)->value;
+  int locals = ((LOCATION*)tac_code->operand_one)->value;
+  int tempories = ((LOCATION*)tac_code->operand_two)->value;
+
   int size = 4; //each arg, local or tempory size i.e. 4 byts
   //Work out how many bytes are needed
-  int bytes_needed = args * locals * tempories * size;
+  int bytes_needed = (args + locals + tempories + 3) * size;//The 3 is the space for prev, enclosing and pc
 
   //Allocate Space
   MIPS *bytes = new_mips();
@@ -89,7 +130,35 @@ MIPS *create_activation_record(int args, int locals, int tempories)
   syscall->instruction = SYSCALL;
   syscall->next = allocate;
 
-  return syscall;
+  //Move $fp into $t0
+  MIPS *move_fp = new_mips();
+  move_fp->instruction = MOVE;
+  move_fp->operand_two = 30;
+  move_fp->operand_one = 8;
+  move_fp->next = syscall;
+
+  //Put $fp in prev and change $fp to the value in $v0
+  MIPS *move_frame_pointer = new_mips();
+  move_frame_pointer->instruction = MOVE;
+  move_frame_pointer->operand_two = 2;
+  move_frame_pointer->operand_one = 30;
+  move_frame_pointer->next = move_fp;
+
+  //Change prev value to that in $fp
+  MIPS *store_instruction = new_mips();
+  store_instruction->instruction = STOREWORD_INS;
+  store_instruction->destination = 0;//First space in record (Previous)
+  store_instruction->operand_one = 8;//$fp temp
+  store_instruction->next = move_frame_pointer;
+
+  //Store the $ra in the 2nd place in the frame
+  MIPS *save_return = new_mips();
+  save_return->instruction = STOREWORD_INS;
+  save_return->destination = 4;//Second space in record
+  save_return->operand_one = 31;//$ra
+  save_return->next = store_instruction;
+
+  return save_return;
 }
 
 MIPS *translate_store(TAC *tac_code)
@@ -333,7 +402,7 @@ MIPS *translate_return(TAC *tac_code)
   LOCATION *destination = tac_code->destination;
 
   MIPS *load_instruction = new_mips();
-  load_instruction->destination = RETURN_REG; //RANDOM register choice
+  load_instruction->destination = MIPS_RETURN_REG;
   if (operand->type == LOCTOKEN)
   {
     //if its in a token i.e. value or variable
@@ -352,9 +421,29 @@ MIPS *translate_return(TAC *tac_code)
     //If its in a memory location
     load_instruction->instruction = LOADWORD_INS;
     load_instruction->operand_one = find_in_memory(tac_code->operand_one);
+
+    if (operand->reg == RETURN_REG){
+      load_instruction->instruction = MOVE;
+      load_instruction->operand_one = MIPS_RETURN_REG;
+      load_instruction->operand_two = MIPS_RETURN_REG
+    }
   }
 
-  return load_instruction;
+  //Jump back to the return address
+  //Load $ra out of the frame
+  //Load two operands into registers
+  MIPS *load_return_address = new_mips();
+  load_return_address->instruction = LOADWORD_INS;
+  load_return_address->destination = 8;
+  load_return_address->operand_one = 4;
+  load_return_address->next = load_instruction;
+  //jump to the value
+  MIPS *jump_to_return = new_mips();
+  jump_to_return->instruction = JUMP_REG;
+  jump_to_return->destination = 8;
+  jump_to_return->next = load_return_address;
+
+  return jump_to_return;
 }
 
 MIPS *translate_conditional(TAC *tac_code)
@@ -393,9 +482,11 @@ MIPS *translate_label(TAC *tac_code)
 
 MIPS *translate_function_def(TAC *tac_code)
 {
+  memory_env = new_frame();
+
   MIPS *label_instruction = new_mips();
   label_instruction->instruction = FUNCTION_DEF;
-  label_instruction->operand_one = tac_code->label;
+  label_instruction->operand_one = tac_code->operand_one;
 
   return label_instruction;
 }
@@ -406,6 +497,16 @@ MIPS *translate_jump(TAC *tac_code)
   jump_instruction->instruction = JUMP;
   LOCATION *operand_one = tac_code->operand_one;
   jump_instruction->operand_one = operand_one->value;
+
+  return jump_instruction;
+}
+
+MIPS *translate_jump_to_func(TAC *tac_code)
+{
+  MIPS *jump_instruction = new_mips();
+  jump_instruction->instruction = JUMPTOFUNC;
+  LOCATION *operand_one = tac_code->operand_one;
+  jump_instruction->operand_one = operand_one;
 
   return jump_instruction;
 }
@@ -437,10 +538,12 @@ MIPS *tac_to_mips(TAC *tac_code)
       return translate_label(tac_code);
     case JUMP:
       return translate_jump(tac_code);
+    case JUMPTOFUNC:
+      return translate_jump_to_func(tac_code);
     case FUNCTION_DEF:
       return translate_function_def(tac_code);
     case NEWFRAME:
-      return new_tac();
+      return create_activation_record(tac_code);
   }
 }
 
@@ -455,5 +558,4 @@ MIPS *translate_tac(TAC *tac)
   }
 
   return tac_to_mips(tac);
-
 }

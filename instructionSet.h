@@ -12,5 +12,9 @@
 #define BRANCH_EQ_INS 12
 #define BRANCH_NEQ_INS 13
 #define SYSCALL 14
+#define MOVE 15
+#define JUMP_REG 16
 
-#define RETURN_REG 31
+#define MIPS_RETURN_REG 2;
+
+#define RETURN_REG 999

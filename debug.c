@@ -8,6 +8,27 @@
 #include "MIPS.h"
 #include "instructionSet.h"
 
+
+char *get_location(LOCATION *loc)
+{
+  if (loc->type == LOCREG)
+  {
+    if (loc->reg == RETURN_REG) return "result";
+    char *string = malloc(sizeof(char) * 5);
+    sprintf(string, "r%d", loc->reg);
+    return string;
+  } else {
+    TOKEN *t = (TOKEN*)loc->token;
+    if (t->type == CONSTANT) {
+      char *result = malloc(sizeof(char) * 3);
+      sprintf(result, "%d", t->value);
+      return result;
+    } else {
+      return t->lexeme;
+    }
+  }
+}
+
 void print_variable_list(VARIABLE *pointer)
 {
   printf("LIST\n");
@@ -139,8 +160,10 @@ void print_tac(TAC *tac_code)
     LOCATION *operand_one = tac_code->operand_one;
     printf("%s := %s\n", get_location(destination), get_location(operand_one));
   } else if (tac_code->operation == RETURN){
-    LOCATION *operand_one = tac_code->operand_one;
-    printf("RETURN %s\n", get_location(operand_one));
+    if (tac_code->operand_one){
+      LOCATION *operand_one = tac_code->operand_one;
+      printf("RETURN %s\n", get_location(operand_one));
+    } else { printf("RETURN\n"); }
   } else if (tac_code->operation == IF_NOT){
     LOCATION *operand_one = tac_code->operand_one;
     LOCATION *operand_two = tac_code->operand_two;
@@ -154,6 +177,9 @@ void print_tac(TAC *tac_code)
   } else if (tac_code->operation == JUMP){
     LOCATION *operand_one = tac_code->operand_one;
     printf("GOTO %d\n", operand_one->value);
+  } else if (tac_code->operation == JUMPTOFUNC){
+    LOCATION *operand_one = tac_code->operand_one;
+    printf("CALL %s\n", ((TOKEN*)operand_one->token)->lexeme);
   } else if (tac_code->operation == FUNCTION_DEF){
     LOCATION *location = tac_code->operand_one;
     TOKEN *function = location->token;
@@ -186,10 +212,10 @@ void print_mips(MIPS *mips, FILE *file)
       fprintf(file, "%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
       break;
     case STOREWORD_INS:
-      fprintf(file, "%s %s %d($gp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
+      fprintf(file, "%s %s %d($fp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
       break;
     case LOADWORD_INS:
-      fprintf(file, "%s %s %d($gp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      fprintf(file, "%s %s %d($fp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
       break;
     case '+':
     case '-':
@@ -199,9 +225,11 @@ void print_mips(MIPS *mips, FILE *file)
       break;
     case '*':
     case '/':
+    case MOVE:
       fprintf(file, "%s %s %s\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two]);
       break;
     case MOVE_LOW_INS:
+    case JUMP_REG:
       fprintf(file, "%s %s\n", get_instruction(mips->instruction), registers[mips->destination]);
       break;
     case XOR_IMEDIATE_INS:
@@ -217,8 +245,17 @@ void print_mips(MIPS *mips, FILE *file)
     case JUMP:
       fprintf(file, "%s label%d\n", get_instruction(mips->instruction), mips->operand_one);
       break;
+    case JUMPTOFUNC:
+      fprintf(file, "%s %s\n", get_instruction(mips->instruction), ((TOKEN*)((LOCATION*)mips->operand_one)->token)->lexeme);
+      break;
+    case JUMPTOADDRS:
+      fprintf(file, "%s %s\n", get_instruction(mips->instruction), ((TOKEN*)((LOCATION*)mips->operand_one)->token)->lexeme);
+      break;
     case FUNCTION_DEF:
-      fprintf(file, "main:\n");
+      fprintf(file, "%s:\n", ((TOKEN*)((LOCATION*)mips->operand_one)->token)->lexeme);
+      break;
+    case SYSCALL:
+      fprintf(file, "syscall\n");
       break;
   }
 }

@@ -21,32 +21,6 @@ extern UNION* intepret_body(NODE *tree, FRAME *enviroment);
 extern UNION* intepret(NODE *tree, FRAME *enviroment);
 extern UNION* interpret_definition(NODE *tree, FRAME *enviroment);
 
-UNION* new_union(int type)
-{
-  UNION *ans = (UNION*)malloc(sizeof(UNION));
-  ans->value = 0;
-  ans->type = type;
-  ans->hasreturned = 0;
-  return ans;
-}
-
-FRAME* new_frame()
-{
-  FRAME *ans = (FRAME*)malloc(sizeof(FRAME));
-  ans->next = 0;
-  ans->value = 0;
-  return ans;
-}
-
-VARIABLE* new_variable(TOKEN *token, UNION *value)
-{
-  VARIABLE *ans = (VARIABLE*)malloc(sizeof(VARIABLE));
-  ans->token = token;
-  ans->value = value;
-  ans->next = 0;
-  return ans;
-}
-
 CLOSURE* new_closure(NODE *ast, FRAME *enviroment, NODE *arguments)
 {
   CLOSURE *ans = (CLOSURE*)malloc(sizeof(CLOSURE));
@@ -60,14 +34,18 @@ CLOSURE* new_closure(NODE *ast, FRAME *enviroment, NODE *arguments)
 
 void store_variable(FRAME *enviroment, TOKEN *token, UNION *value)
 {
-
   VARIABLE *variable = new_variable(token, value);
 
   if(enviroment->value == NULL){
     enviroment->value = variable;
   } else {
     VARIABLE *current = (VARIABLE*)enviroment->value;
-    while (current->next != NULL) {
+    if (current->token == token)
+    {
+      current->value = value;
+      return;
+    }
+    while ((current->next != NULL)) {
       current = (VARIABLE*)current->next;
     }
     current->next = variable;
@@ -98,7 +76,6 @@ UNION* lookup_variable(FRAME *enviroment, TOKEN *target_token)
     enviroment = enviroment->next;
   }
 }
-
 
 UNION* intepret_condition(NODE *tree, FRAME *enviroment)
 {
@@ -248,7 +225,27 @@ UNION* intepret_apply(FRAME *enviroment, NODE *tree)
   return endresult;
 }
 
+UNION *interpret_assingment(NODE *tree, FRAME *enviroment)
+{
+  TOKEN *token = tree->left->left;
+  UNION *result = intepret_body(tree->right, enviroment);
 
+  store_variable(enviroment, token, result);
+}
+
+UNION *interpret_loop(NODE *tree, FRAME *enviroment)
+{
+  UNION *condition = intepret_body(tree->left, enviroment);
+
+  while (condition->value)
+  {
+    intepret_body(tree->right, enviroment);
+    condition = intepret_body(tree->left, enviroment);
+    printf("RESULT - %d\n", condition->value);
+  }
+
+  return;
+}
 
 UNION* intepret_body(NODE *tree, FRAME *enviroment)
 {
@@ -271,6 +268,8 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
 
     case IF:
       return intepret_condition(tree, enviroment);
+    case '=':
+      return interpret_assingment(tree, enviroment);
 
     case '<':
     case '>':
@@ -286,17 +285,18 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
 
     case '~':
       if (tree->left->left->type == INT) {
-        TOKEN *token = (TOKEN*)tree->right->left;
+        TOKEN *token = (TOKEN*)tree->right->left->left;
 
         UNION *result = new_union(INT);
-        result->value = token->value;
+        result->value = ((TOKEN*)tree->right->right->left)->value;
 
         store_variable(enviroment, token, result);
       }
       return;
     case 'D':
       return interpret_definition(tree, enviroment);
-
+    case WHILE:
+      return interpret_loop(tree, enviroment);
     case LEAF:
       if(tree->left->type == CONSTANT) {
         TOKEN *t = (TOKEN *)tree->left;
@@ -407,11 +407,12 @@ int main(int argc, char** argv)
       MIPS *ins = translate_tac(taccode);
       //This will need to change when functions are implemented
       FILE *file = fopen("Output/test.asm", "w");
-      fprintf(file, ".globl main\n\n.text\n\n");
+      fprintf(file, ".globl run\n\n.text\n\n");
+
+      fprintf(file, "\nrun:\njal main\nmove $a0 $v0\nli $v0 1\nsyscall\n\nli $v0, 10\nsyscall\n\n");
       print_mips(ins, file);
-      fprintf(file, "\n\nli $v0 1\nmove $a0 $ra\nsyscall\n\nli $v0, 10\nsyscall\n\n.data\n");
+      print_mips(ins, 0);
+      fprintf(file, "\n.data\n");
 
     }
-
-
 }

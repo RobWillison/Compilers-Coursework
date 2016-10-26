@@ -291,17 +291,34 @@ TAC *compile_funcion_def(NODE *tree)
   add_TAC_to_list(body, frame);
   frame->next = function;
 
-  //function->next = frame;
+  //If the last command in the body isnt a RETURN add one
+  if (body->operation == RETURN) return body;
 
+  TAC *return_tac = new_tac();
+  return_tac->operation = RETURN;
+  return_tac->next = body;
 
+  return return_tac;
+}
 
+TAC *compile_apply(NODE *tree)
+{
+  TAC *jump_to_func = new_tac();
+  jump_to_func->operation = JUMPTOFUNC;
+  LOCATION *func_loc = new_location(LOCTOKEN);
+  func_loc->token = (TOKEN*)tree->left->left;
+  jump_to_func->operand_one = func_loc;
+  LOCATION *return_reg = new_location(LOCREG);
+  return_reg->reg = RETURN_REG;
+  jump_to_func->destination = return_reg;
 
-  return body;
+  return jump_to_func;
 }
 
 TAC *compile(NODE *tree)
 {
   printf("NEXT TREE\n");
+  print_tree(tree);
 
   switch (tree->type) {
     case RETURN:
@@ -320,7 +337,15 @@ TAC *compile(NODE *tree)
     case NE_OP:
       return compile_math(tree);
     case '~':
-      return compile_declaration(tree);
+      if (tree->left->type == 'D')
+      {
+        TAC *first_func = compile(tree->left);
+        TAC *second_func = compile(tree->right);
+        add_TAC_to_list(second_func, first_func);
+        return second_func;
+      } else {
+        return compile_declaration(tree);
+      }
     case IF:
       return compile_conditional(tree);
     case '=':
@@ -329,6 +354,8 @@ TAC *compile(NODE *tree)
       return compile_while(tree);
     case 'D':
       return compile_funcion_def(tree);
+    case APPLY:
+      return compile_apply(tree);
   }
 
   if (tree->type == ';')

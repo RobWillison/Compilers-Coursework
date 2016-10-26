@@ -1,2 +1,1 @@
 Loaded: /usr/share/spim/exceptions.s
-8

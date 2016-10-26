@@ -41,6 +41,7 @@ extern UNION* new_result(int, int);
 typedef struct FRAME
 {
   struct VARIABLE  *value;
+  struct MEMORY    *memory;
   struct FRAME  *next;
 } FRAME;
 

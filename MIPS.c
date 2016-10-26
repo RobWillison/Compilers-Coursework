@@ -6,25 +6,6 @@
 
 const char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 
-char *get_location(LOCATION *loc)
-{
-  if (loc->type == LOCREG)
-  {
-    char *string = malloc(sizeof(char) * 5);
-    sprintf(string, "r%d", loc->reg);
-    return string;
-  } else {
-    TOKEN *t = (TOKEN*)loc->token;
-    if (t->type == CONSTANT) {
-      char *result = malloc(sizeof(char) * 3);
-      sprintf(result, "%d", t->value);
-      return result;
-    } else {
-      return t->lexeme;
-    }
-  }
-}
-
 char *get_instruction(int instruction)
 {
   switch (instruction) {
@@ -56,5 +37,11 @@ char *get_instruction(int instruction)
       return "bne";
     case JUMP:
       return "j";
+    case JUMPTOFUNC:
+      return "jal";
+    case MOVE:
+      return "move";
+    case JUMP_REG:
+      return "jr";
   }
 }

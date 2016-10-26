@@ -1,4 +1,6 @@
 #define JUMP 300
+#define JUMPTOFUNC 301
+#define JUMPTOADDRS 302
 
 typedef struct MIPS
 {
@@ -14,4 +16,3 @@ extern const char* registers[];
 extern MIPS* new_mips();
 
 extern char *get_instruction(int instruction);
-extern char *get_location(LOCATION *location);
