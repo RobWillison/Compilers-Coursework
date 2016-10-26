@@ -1,1 +1,2 @@
-Loaded: /usr/share/spim/exceptions.s
+Loaded: testExceptionHandler.s
+5
