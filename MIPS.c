@@ -16,8 +16,7 @@ char *get_instruction(int instruction)
       return "li";
     case LOADWORD_INS:
       return "lw";
-    case STOREWORD_FP:
-    case STOREWORD_REG:
+    case STOREWORD:
       return "sw";
     case '+':
       return "add";
@@ -62,6 +61,7 @@ MIPS *create_load_ins(LOCATION *destination, LOCATION *operand)
 {
   MIPS *load_instruction = new_mips();
   load_instruction->destination = MIPS_RETURN_REG;
+  load_instruction->operand_one = 30;
   if (operand->type == LOCTOKEN)
   {
     //if its in a token i.e. value or variable
@@ -70,16 +70,16 @@ MIPS *create_load_ins(LOCATION *destination, LOCATION *operand)
     {
       //Its a value do a load imediate
       load_instruction->instruction = LOADIMEDIATE_INS;
-      load_instruction->operand_one = token->value;
+      load_instruction->operand_two = token->value;
     } else {
       //Its a value do a load imediate
       load_instruction->instruction = LOADWORD_INS;
-      load_instruction->operand_one = find_in_memory(operand);
+      load_instruction->operand_two = find_in_memory(operand);
     }
   } else {
     //If its in a memory location
     load_instruction->instruction = LOADWORD_INS;
-    load_instruction->operand_one = find_in_memory(operand);
+    load_instruction->operand_two = find_in_memory(operand);
   }
 
   return load_instruction;

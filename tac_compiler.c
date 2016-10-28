@@ -304,6 +304,9 @@ TAC *compile_funcion_def(NODE *tree)
   frame->operand_one = loc_local;
   frame->operand_two = loc_temp;
 
+  //Allocate Parameters to activation record
+  //TODO need a tac to allocate params
+
   add_TAC_to_list(body, frame);
   frame->next = function;
 

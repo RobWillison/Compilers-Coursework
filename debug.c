@@ -217,14 +217,11 @@ void print_mips(MIPS *mips, FILE *file)
     case LOADIMEDIATE_INS:
       fprintf(file, "%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
       break;
-    case STOREWORD_FP:
-      fprintf(file, "%s %s %d($fp)\n", get_instruction(mips->instruction), registers[mips->operand_one], mips->destination);
-      break;
-    case STOREWORD_REG:
-      fprintf(file, "%s %s 0(%s)\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->destination]);
+    case STOREWORD:
+      fprintf(file, "%s %s %d(%s)\n", get_instruction(mips->instruction), registers[mips->operand_two], mips->operand_one, registers[mips->destination]);
       break;
     case LOADWORD_INS:
-      fprintf(file, "%s %s %d($fp)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_one);
+      fprintf(file, "%s %s %d(%s)\n", get_instruction(mips->instruction), registers[mips->destination], mips->operand_two, registers[mips->operand_one]);
       break;
     case '+':
     case '-':
