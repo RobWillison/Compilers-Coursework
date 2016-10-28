@@ -25,6 +25,7 @@ for file in glob.glob("Examples/test*"):
     output = open('temp.txt', 'r');
     value = output.read().splitlines()[1];
     value = int(value);
+    os.remove('temp.txt');
 
     if(expected[file] != value):
         print("COMPILER FAIL: " + file +" RESULT: " + str(value) + " EXPECTED: " + str(expected[file]))

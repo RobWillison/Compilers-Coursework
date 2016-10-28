@@ -48,3 +48,47 @@ char *get_instruction(int instruction)
       return "addi";
   }
 }
+
+MIPS *new_mips()
+{
+  MIPS *ins = (MIPS*)malloc(sizeof(MIPS));
+  return ins;
+}
+
+MIPS *create_load_ins(LOCATION *destination, LOCATION *operand)
+{
+  MIPS *load_instruction = new_mips();
+  load_instruction->destination = MIPS_RETURN_REG;
+  if (operand->type == LOCTOKEN)
+  {
+    //if its in a token i.e. value or variable
+    TOKEN *token = operand->token;
+    if (token->type == CONSTANT)
+    {
+      //Its a value do a load imediate
+      load_instruction->instruction = LOADIMEDIATE_INS;
+      load_instruction->operand_one = token->value;
+    } else {
+      //Its a value do a load imediate
+      load_instruction->instruction = LOADWORD_INS;
+      load_instruction->operand_one = find_in_memory(operand);
+    }
+  } else {
+    //If its in a memory location
+    load_instruction->instruction = LOADWORD_INS;
+    load_instruction->operand_one = find_in_memory(operand);
+  }
+
+  return load_instruction;
+}
+
+MIPS *create_mips_instruction(int type, int destination, int operand_one, int operand_two)
+{
+  MIPS *instruction = new_mips();
+  if (type) instruction->instruction = type;
+  if (destination) instruction->destination = destination;
+  if (operand_one) instruction->operand_one = operand_one;
+  if (operand_two) instruction->operand_two = operand_two;
+
+  return instruction;
+}
