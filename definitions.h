@@ -26,6 +26,13 @@ typedef struct node {
 NODE* make_leaf(TOKEN*);
 NODE* make_node(int, NODE*, NODE*);
 
+typedef struct CLOSURE
+{
+  struct NODE   *ast;
+  struct FRAME  *enviroment;
+  struct NODE   *arguments;
+} CLOSURE;
+
 typedef struct UNION
 {
   int           type;
@@ -55,12 +62,5 @@ typedef struct VARIABLE
 } VARIABLE;
 
 extern VARIABLE* new_variable(TOKEN *, UNION *);
-
-typedef struct CLOSURE
-{
-  struct NODE   *ast;
-  struct FRAME  *enviroment;
-  struct NODE   *arguments;
-} CLOSURE;
 
 extern CLOSURE* new_closure(NODE *ast, FRAME *enviroment, NODE *arguments);

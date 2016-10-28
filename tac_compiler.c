@@ -283,7 +283,7 @@ TAC *compile_funcion_def(NODE *tree)
   TAC *function = new_tac();
   function->operation = FUNCTION_DEF;
   LOCATION *location = new_location(LOCTOKEN);
-  location->token = tree->left->right->left->left;
+  location->token = (TOKEN*)tree->left->right->left->left;
   function->operand_one = location;
 
   TAC *body = compile(tree->right);
@@ -335,7 +335,7 @@ int count_parameters(NODE *tree)
 TAC *save_parameters(NODE *tree)
 {
   if (!tree) return 0;
-  int count = 0;
+
   if (tree->type == LEAF)
   {
     TAC *get_param = compile(tree);
@@ -350,8 +350,6 @@ TAC *save_parameters(NODE *tree)
     add_TAC_to_list(right_param, left_param);
     return right_param;
   }
-
-  return count;
 }
 
 TAC *store_paraments(NODE *tree)
