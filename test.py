@@ -3,7 +3,7 @@ import glob, os
 import re
 
 expected = {'Examples/test_while.c': 5, 'Examples/test_twice.c': 22,'Examples/test_cplus.c': 7,'Examples/test_fact.c': 24,'Examples/test_innerfunc.c': 6, 'Examples/test_if_else.c': 3, 'Examples/test_math.c': 14, 'Examples/test_simple.c': 8, 'Examples/test_function.c': 4, 'Examples/test_function_args.c': 6}
-compiler_ignore = {'Examples/test_twice.c','Examples/test_cplus.c','Examples/test_fact.c','Examples/test_innerfunc.c', 'Examples/test_function.c', 'Examples/test_function_args.c'}
+compiler_ignore = {'Examples/test_twice.c','Examples/test_cplus.c','Examples/test_fact.c','Examples/test_innerfunc.c'}
 FNULL = open(os.devnull, 'w')
 
 #Test all cases for intepret

@@ -153,8 +153,6 @@ void print_tac(TAC *tac_code)
 
   if (tac_code == 0) return;
 
-  print_tac(tac_code->next);
-
   if (tac_code->operation == 'S') {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
@@ -196,6 +194,8 @@ void print_tac(TAC *tac_code)
     printf("ALLOCATE PARAMS %d\n", paramenter_count->value);
   } else if (tac_code->operation == SAVE_PARAM){
     printf("SAVE PARAM %s\n", get_location(tac_code->operand_one));
+  } else if (tac_code->operation == LOADPARAM){
+    printf("LOAD PARAM %s\n", ((TOKEN*)((LOCATION*)tac_code->destination)->token)->lexeme);
   } else {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
@@ -203,6 +203,8 @@ void print_tac(TAC *tac_code)
 
     printf("%s := %s %s %s\n", get_location(destination), get_location(operand_one), named(tac_code->operation), get_location(operand_two));
   }
+
+  print_tac(tac_code->next);
 }
 
 void print_mips(MIPS *mips, FILE *file)
@@ -211,7 +213,6 @@ void print_mips(MIPS *mips, FILE *file)
   {
     file = stdout;
   }
-  if (mips->next) print_mips(mips->next, file);
 
   switch (mips->instruction) {
     case LOADIMEDIATE_INS:
@@ -265,4 +266,6 @@ void print_mips(MIPS *mips, FILE *file)
       fprintf(file, "syscall\n");
       break;
   }
+
+  if (mips->next) print_mips(mips->next, file);
 }

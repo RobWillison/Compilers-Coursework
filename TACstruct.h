@@ -5,6 +5,7 @@
 #define LABEL 3000
 #define FUNCTION_DEF 6000
 #define NEWFRAME 7000
+#define LOADPARAM 8000
 
 typedef struct LOCATION
 {
