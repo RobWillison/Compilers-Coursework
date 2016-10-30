@@ -177,7 +177,8 @@ void print_tac(TAC *tac_code)
     printf("GOTO %d\n", operand_one->value);
   } else if (tac_code->operation == JUMPTOFUNC){
     LOCATION *operand_one = tac_code->operand_one;
-    printf("CALL %s\n", ((TOKEN*)operand_one->token)->lexeme);
+
+    printf("CALL %s\n", get_location(operand_one));
   } else if (tac_code->operation == FUNCTION_DEF){
     LOCATION *location = tac_code->operand_one;
     TOKEN *function = location->token;

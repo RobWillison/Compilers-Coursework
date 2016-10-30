@@ -393,7 +393,19 @@ void store_paraments(NODE *tree)
 
 void compile_apply(NODE *tree)
 {
+  TAC *store_apply_result = 0;
 
+  if (tree->left->type == APPLY)
+  {
+    compile_apply(tree->left);
+    //Store the result in a register so it can be called later
+    store_apply_result = new_tac();
+    store_apply_result->operation = 'S';
+    store_apply_result->destination = next_reg();
+    LOCATION *store_loc = new_location(LOCREG);
+    store_loc->reg = RETURN_REG;
+    store_apply_result->operand_one = store_loc;
+  }
   store_paraments(tree->right);
 
   //Allocate those bytes
@@ -403,12 +415,18 @@ void compile_apply(NODE *tree)
 
   TAC *jump_to_func = new_tac();
   jump_to_func->operation = JUMPTOFUNC;
-  LOCATION *func_loc = new_location(LOCTOKEN);
-  func_loc->token = (TOKEN*)tree->left->left;
-  jump_to_func->operand_one = func_loc;
+
   LOCATION *return_reg = new_location(LOCREG);
   return_reg->reg = RETURN_REG;
-  jump_to_func->destination = return_reg;
+
+  if (store_apply_result) {
+    jump_to_func->operand_one = store_apply_result->destination;
+  } else {
+    LOCATION *func_loc = new_location(LOCTOKEN);
+    func_loc->token = (TOKEN*)tree->left->left;
+    jump_to_func->operand_one = func_loc;
+    jump_to_func->destination = return_reg;
+  }
 }
 
 TAC *compile(NODE *tree)
