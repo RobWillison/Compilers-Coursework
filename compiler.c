@@ -490,7 +490,6 @@ MIPS *tac_to_mips(TAC *tac_code)
     case SAVE_PARAM:
       return put_param_in_memory(tac_code);
     case LOADPARAM:
-    case SET_ENCLOSING_AR:
       return NULL;
   }
 }

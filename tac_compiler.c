@@ -297,23 +297,11 @@ LOCATION *find_last_function_def()
 
 void compile_funcion_def(NODE *tree)
 {
-  int end_label = 0;
-  LOCATION *enclosing_func = 0;
-  //Check if this function is inside another if so wrap in a jump and label
-  if (current_tac_tail && current_tac_tail->operation != RETURN)
-  {
-    end_label = get_label();
-    LOCATION *end_label_location = new_location(LABEL);
-    end_label_location->value = end_label;
+  TAC *tac_tail = current_tac_tail;
+  TAC *tac_head = current_tac_head;
 
-    TAC *jump = new_tac();
-    jump->operation = JUMP;
-    jump->operand_one = end_label_location;
-
-    //Find enclosing functions name
-    enclosing_func = find_last_function_def();
-  }
-
+  current_tac_tail = 0;
+  current_tac_head = 0;
 
   TAC *function = new_tac();
   function->operation = FUNCTION_DEF;
@@ -326,13 +314,6 @@ void compile_funcion_def(NODE *tree)
   //Allocate Parameters to activation record
   //for each arguments
   create_load_arg(tree->left->right->right);
-
-  if (enclosing_func) {
-    //Save pointer to the enclosing frame
-    TAC *enclosing = new_tac();
-    enclosing->operation = SET_ENCLOSING_AR;
-    enclosing->operand_one = enclosing_func;
-  }
 
   TAC *body_start = current_tac_tail;
   compile(tree->right);
@@ -361,13 +342,8 @@ void compile_funcion_def(NODE *tree)
     return_tac->operation = RETURN;
   };
 
-  if (end_label) {
-    TAC *label = new_tac();
-    label->operation = LABEL;
-    label->label = end_label;
-  }
-
-
+  current_tac_tail->next = tac_head;
+  current_tac_tail = tac_tail;
 }
 
 int count_parameters(NODE *tree)

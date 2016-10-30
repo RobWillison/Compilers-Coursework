@@ -1,0 +1,11 @@
+Loaded: testExceptionHandler.s
+Exception occurred at PC=0x004000d0
+  Unaligned address in inst/data fetch: 0x10020017
+  Exception 4  [Address error in inst/data fetch]  occurred and ignored
+Exception occurred at PC=0x004000ac
+  Bad address in data/stack read: 0x10020070
+  Exception 7  [Bad data address]  occurred and ignored
+Exception occurred at PC=0x004000b0
+  Bad address in data/stack read: 0x10020070
+  Exception 7  [Bad data address]  occurred and ignored
+0
