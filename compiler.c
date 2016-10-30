@@ -58,6 +58,8 @@ int store_in_memory(LOCATION *tac_location)
   MEMORY *memory = (MEMORY*)malloc(sizeof(MEMORY));
   memory->tac_location = loc;
 
+  if (!memory_env) memory_env = new_frame();
+
   if(memory_env->memory == NULL){
     memory_env->memory = memory;
     memory->mips_location = 12;
@@ -143,6 +145,7 @@ MIPS *create_activation_record(TAC *tac_code)
   tac_code = tac_code->next;
   int count = 0;
   MIPS *current_tail = save_return;
+
   while (tac_code->operation == LOADPARAM)
   {
 
@@ -170,6 +173,7 @@ MIPS *translate_store(TAC *tac_code)
   MIPS *load_instruction;
   if (operand->type == LOCTOKEN)
   {
+
     //if its in a token i.e. value or variable
     TOKEN *token = operand->token;
     if (token->type == CONSTANT)
@@ -187,6 +191,7 @@ MIPS *translate_store(TAC *tac_code)
 
   MIPS *store_instruction;
   int in_memory = find_in_memory(destination);
+
   if (in_memory == -1) {
     int new_location = store_in_memory(tac_code->destination);
     store_instruction = create_mips_instruction(STOREWORD, 30, new_location, load_instruction->destination);
@@ -195,6 +200,7 @@ MIPS *translate_store(TAC *tac_code)
   }
 
   load_instruction->next = store_instruction;
+
   return load_instruction;
 }
 
@@ -340,6 +346,8 @@ MIPS *translate_return(TAC *tac_code)
     load_instruction = create_load_ins(destination, operand);
   }
 
+  memory_env = 0;
+
   //Jump back to the return address
   //Load $ra out of the frame
   //Load two operands into registers
@@ -387,7 +395,6 @@ MIPS *translate_label(TAC *tac_code)
 
 MIPS *translate_function_def(TAC *tac_code)
 {
-  memory_env = new_frame();
 
   MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, (long)tac_code->operand_one, 0);
 
@@ -483,6 +490,7 @@ MIPS *tac_to_mips(TAC *tac_code)
     case SAVE_PARAM:
       return put_param_in_memory(tac_code);
     case LOADPARAM:
+    case SET_ENCLOSING_AR:
       return NULL;
   }
 }

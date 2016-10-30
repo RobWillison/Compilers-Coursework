@@ -283,8 +283,37 @@ void create_load_arg(NODE *tree)
   }
 }
 
+LOCATION *find_last_function_def()
+{
+  TAC *pointer = current_tac_head;
+  LOCATION *last_func;
+  while (pointer)
+  {
+    if (pointer->operation == FUNCTION_DEF) last_func = (LOCATION*)pointer->operand_one;
+    pointer = pointer->next;
+  }
+  return last_func;
+}
+
 void compile_funcion_def(NODE *tree)
 {
+  int end_label = 0;
+  LOCATION *enclosing_func = 0;
+  //Check if this function is inside another if so wrap in a jump and label
+  if (current_tac_tail && current_tac_tail->operation != RETURN)
+  {
+    end_label = get_label();
+    LOCATION *end_label_location = new_location(LABEL);
+    end_label_location->value = end_label;
+
+    TAC *jump = new_tac();
+    jump->operation = JUMP;
+    jump->operand_one = end_label_location;
+
+    //Find enclosing functions name
+    enclosing_func = find_last_function_def();
+  }
+
 
   TAC *function = new_tac();
   function->operation = FUNCTION_DEF;
@@ -298,8 +327,16 @@ void compile_funcion_def(NODE *tree)
   //for each arguments
   create_load_arg(tree->left->right->right);
 
-  TAC *body_start = current_tac_head;
+  if (enclosing_func) {
+    //Save pointer to the enclosing frame
+    TAC *enclosing = new_tac();
+    enclosing->operation = SET_ENCLOSING_AR;
+    enclosing->operand_one = enclosing_func;
+  }
+
+  TAC *body_start = current_tac_tail;
   compile(tree->right);
+  //print_tac(body_start->next);
 
   int locals = count_locals(body_start->next);
   LOCATION *loc_local = new_location(INT);
@@ -319,10 +356,18 @@ void compile_funcion_def(NODE *tree)
 
   //If the last command in the body isnt a RETURN add one
   TAC *last_tac = get_tail(body_start->next);
-  if (last_tac->operation == RETURN) return;
+  if (last_tac->operation != RETURN) {
+    TAC *return_tac = new_tac();
+    return_tac->operation = RETURN;
+  };
 
-  TAC *return_tac = new_tac();
-  return_tac->operation = RETURN;
+  if (end_label) {
+    TAC *label = new_tac();
+    label->operation = LABEL;
+    label->label = end_label;
+  }
+
+
 }
 
 int count_parameters(NODE *tree)
