@@ -152,7 +152,7 @@ void print_tac(TAC *tac_code)
 {
 
   if (tac_code == 0) return;
-  printf("TEST %d\n", tac_code->operation);
+
   if (tac_code->operation == 'S') {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
