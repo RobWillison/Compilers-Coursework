@@ -71,23 +71,47 @@ MIPS_STORED_VALUE *get_location_from_env(LOCATION* location)
 int get_memory_location_from_env(LOCATION *location)
 {
   MIPS_STORED_VALUE *result = get_location_from_env(location);
+
   if (result == NULL) return -1;
   return ((MIPS_LOCATION*)result->location)->memory_frame_location;
+}
+
+int get_next_free_memory()
+{
+  MIPS_BINDING *binding = mips_env->bindings;
+
+  if (binding == NULL)
+  {
+    return 8;
+  }
+
+  int last_used_memory = 8;
+  while (binding)
+  {
+    MIPS_STORED_VALUE *stored_value = (MIPS_STORED_VALUE*)binding->value;
+
+    if (stored_value->type == CONSTANT)
+    {
+      last_used_memory = ((MIPS_LOCATION*)stored_value->location)->memory_frame_location;
+    }
+    binding = binding->next;
+  }
+
+  return last_used_memory + 4;
 }
 
 int store_value(LOCATION *tac_location)
 {
   MIPS_BINDING *binding = mips_env->bindings;
 
-  int memory_location = 12;
   if (binding) {
-    memory_location = memory_location + 4;
     while (binding->next)
     {
-      memory_location = memory_location + 4;
       binding = binding->next;
     }
   }
+
+  int memory_location = get_next_free_memory();
 
   MIPS_BINDING *new_binding = (MIPS_BINDING*)malloc(sizeof(MIPS_BINDING));
   new_binding->next = NULL;
@@ -416,7 +440,7 @@ MIPS *translate_function_def(TAC *tac_code)
   new_mips_env->prev = mips_env;
   new_mips_env->bindings = NULL;
   mips_env = new_mips_env;
-  
+
   MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, (long)tac_code->operand_one, 0);
 
   return label_instruction;
@@ -474,8 +498,9 @@ MIPS *put_param_in_memory(TAC *tac_code)
   return load_operand_one;
 }
 
-MIPS *create_closure()
+MIPS *create_closure(TAC *tac_code)
 {
+
   return NULL;
 }
 
