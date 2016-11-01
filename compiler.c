@@ -13,6 +13,8 @@
 
 MIPS_FRAME *mips_env = NULL;
 
+int function_count = 0;
+
 void add_MIPS_to_list(MIPS *front, MIPS *tail)
 {
   while (front->next != 0) front = front->next;
@@ -134,9 +136,38 @@ int store_value(LOCATION *tac_location)
   return memory_location;
 }
 
-MIPS_LOCATION *store_closure()
+void store_closure(TOKEN *name, MIPS_LOCATION *fp_location)
 {
-  //TODO
+  MIPS_CLOSURE *closure = (MIPS_CLOSURE*)malloc(sizeof(MIPS_CLOSURE));
+  closure->name = name->lexeme;
+  closure->enclosing_frame = fp_location;
+
+  MIPS_BINDING *binding = mips_env->bindings;
+
+  if (binding) {
+    while (binding->next)
+    {
+      binding = binding->next;
+    }
+  }
+
+  int memory_location = get_next_free_memory();
+
+  MIPS_BINDING *new_binding = (MIPS_BINDING*)malloc(sizeof(MIPS_BINDING));
+  new_binding->next = NULL;
+  LOCATION *tac_location = new_location(LOCTOKEN);
+  tac_location->token = name;
+  new_binding->tac_location = tac_location;
+  if (binding) {
+    binding->next = new_binding;
+  } else {
+    mips_env->bindings = new_binding;
+  }
+
+  MIPS_STORED_VALUE *new_value = (MIPS_STORED_VALUE*)malloc(sizeof(MIPS_STORED_VALUE));
+  new_value->type = FUNCTION;
+  new_value->closure = closure;
+  new_binding->value = new_value;
 }
 
 MIPS *create_activation_record(TAC *tac_code)
@@ -387,8 +418,6 @@ MIPS *translate_return(TAC *tac_code)
     load_instruction = create_load_ins(destination, operand);
   }
 
-  mips_env = mips_env->prev;
-
   //Jump back to the return address
   //Load $ra out of the frame
   //Load two operands into registers
@@ -436,12 +465,16 @@ MIPS *translate_label(TAC *tac_code)
 
 MIPS *translate_function_def(TAC *tac_code)
 {
+  mips_env = mips_env->prev;
+
   MIPS_FRAME *new_mips_env = (MIPS_FRAME*)malloc(sizeof(MIPS_FRAME));
   new_mips_env->prev = mips_env;
   new_mips_env->bindings = NULL;
   mips_env = new_mips_env;
 
-  MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, (long)tac_code->operand_one, 0);
+
+
+  MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, ++function_count, 0);
 
   return label_instruction;
 }
@@ -500,6 +533,13 @@ MIPS *put_param_in_memory(TAC *tac_code)
 
 MIPS *create_closure(TAC *tac_code)
 {
+  //Mips Save Value Of $fp
+  MIPS *save_fp = create_mips_instruction(STOREWORD, 30, store_value(tac_code->operand_one), 30);
+
+  TOKEN *token = (TOKEN*)((LOCATION*)tac_code->operand_one)->token;
+
+  MIPS_CLOSURE *closure = (MIPS_CLOSURE*)malloc(sizeof(MIPS_CLOSURE));
+  closure->name = token->lexeme;
 
   return NULL;
 }
@@ -548,6 +588,24 @@ MIPS *tac_to_mips(TAC *tac_code)
   }
 }
 
+MIPS *setup_global_scope()
+{
+
+}
+
+MIPS *translate_tac_instruction(TAC *tac)
+{
+  if (tac->next)
+  {
+    MIPS *front = tac_to_mips(tac);
+    MIPS *tail = translate_tac_instruction(tac->next);
+
+    if (!front) return tail;
+    add_MIPS_to_list(front, tail);
+    return front;
+  }
+}
+
 MIPS *translate_tac(TAC *tac)
 {
   if (mips_env == NULL)
@@ -556,15 +614,5 @@ MIPS *translate_tac(TAC *tac)
     mips_env->prev = 0;
     mips_env->bindings = NULL;
   }
-  if (tac->next)
-  {
-    MIPS *front = tac_to_mips(tac);
-    MIPS *tail = translate_tac(tac->next);
-
-    if (!front) return tail;
-    add_MIPS_to_list(front, tail);
-    return front;
-  }
-
-  return tac_to_mips(tac);
+  return translate_tac_instruction(tac);
 }

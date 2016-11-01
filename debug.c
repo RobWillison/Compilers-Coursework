@@ -258,13 +258,10 @@ void print_mips(MIPS *mips, FILE *file)
       fprintf(file, "%s label%d\n", get_instruction(mips->instruction), mips->operand_one);
       break;
     case JUMPTOFUNC:
-      fprintf(file, "%s %s\n", get_instruction(mips->instruction), ((TOKEN*)((LOCATION*)(long)mips->operand_one)->token)->lexeme);
-      break;
-    case JUMPTOADDRS:
-      fprintf(file, "%s %s\n", get_instruction(mips->instruction), ((TOKEN*)((LOCATION*)(long)mips->operand_one)->token)->lexeme);
+      fprintf(file, "%s function%d\n", get_instruction(mips->instruction), mips->operand_one);
       break;
     case FUNCTION_DEF:
-      fprintf(file, "%s:\n", ((TOKEN*)((LOCATION*)(long)mips->operand_one)->token)->lexeme);
+      fprintf(file, "function%d:\n", mips->operand_one);
       break;
     case SYSCALL:
       fprintf(file, "syscall\n");
