@@ -412,6 +412,11 @@ MIPS *translate_label(TAC *tac_code)
 
 MIPS *translate_function_def(TAC *tac_code)
 {
+  MIPS_FRAME *new_mips_env = (MIPS_FRAME*)malloc(sizeof(MIPS_FRAME));
+  new_mips_env->prev = mips_env;
+  new_mips_env->bindings = NULL;
+  mips_env = new_mips_env;
+  
   MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, (long)tac_code->operand_one, 0);
 
   return label_instruction;
@@ -430,11 +435,6 @@ MIPS *translate_jump_to_func(TAC *tac_code)
 
   LOCATION *operand_one = tac_code->operand_one;
   MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, (long)operand_one, 0);
-
-  MIPS_FRAME *new_mips_env = (MIPS_FRAME*)malloc(sizeof(MIPS_FRAME));
-  new_mips_env->prev = mips_env;
-  new_mips_env->bindings = NULL;
-  mips_env = new_mips_env;
 
   return jump_instruction;
 }
