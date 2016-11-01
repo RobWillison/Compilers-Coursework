@@ -32,6 +32,15 @@ CLOSURE* new_closure(NODE *ast, FRAME *enviroment, NODE *arguments)
   return ans;
 }
 
+FRAME* new_frame()
+{
+  FRAME *ans = (FRAME*)malloc(sizeof(FRAME));
+  ans->next = 0;
+  ans->value = 0;
+
+  return ans;
+}
+
 void store_variable(FRAME *enviroment, TOKEN *token, UNION *value)
 {
   VARIABLE *variable = new_variable(token, value);

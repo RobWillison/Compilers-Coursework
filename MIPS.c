@@ -5,7 +5,7 @@
 #include "MIPS.h"
 #include "instructionSet.h"
 
-extern int find_in_memory(LOCATION *target);
+extern int get_memory_location_from_env(LOCATION *target);
 
 const char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 
@@ -74,12 +74,12 @@ MIPS *create_load_ins(LOCATION *destination, LOCATION *operand)
     } else {
       //Its a value do a load imediate
       load_instruction->instruction = LOADWORD_INS;
-      load_instruction->operand_two = find_in_memory(operand);
+      load_instruction->operand_two = get_memory_location_from_env(operand);
     }
   } else {
     //If its in a memory location
     load_instruction->instruction = LOADWORD_INS;
-    load_instruction->operand_two = find_in_memory(operand);
+    load_instruction->operand_two = get_memory_location_from_env(operand);
   }
 
   return load_instruction;

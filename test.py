@@ -18,6 +18,8 @@ for file in glob.glob("Examples/test*"):
 for file in glob.glob("Examples/test*"):
     if file in compiler_ignore:
         continue;
+
+    print(file);
     output = open('temp.txt', 'w');
     result = subprocess.call("./mycc -c " + file, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
     result = subprocess.call("spim -exception_file testExceptionHandler.s -file Output/test.asm", shell=True, stdout=output, stderr=subprocess.STDOUT)
