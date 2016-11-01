@@ -182,6 +182,10 @@ void print_tac(TAC *tac_code)
     LOCATION *location = tac_code->operand_one;
     TOKEN *function = location->token;
     printf("%s:\n", function->lexeme);
+  } else if (tac_code->operation == CREATE_CLOSURE){
+    LOCATION *location = tac_code->operand_one;
+    TOKEN *function = location->token;
+    printf("DEFINE CLOSURE %s\n", function->lexeme);
   } else if (tac_code->operation == NEWFRAME){
     LOCATION *arguments = tac_code->destination;
     LOCATION *locals = tac_code->operand_one;

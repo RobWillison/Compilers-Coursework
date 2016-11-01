@@ -397,7 +397,6 @@ int main(int argc, char** argv)
 
       printf("\nRESULT: %d\n", result->value);
 
-
       return result->value;
     } else {
       TAC *taccode = compile(tree);

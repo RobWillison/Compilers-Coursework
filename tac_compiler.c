@@ -297,6 +297,12 @@ LOCATION *find_last_function_def()
 
 void compile_funcion_def(NODE *tree)
 {
+  TAC *define_closure = new_tac();
+  define_closure->operation = CREATE_CLOSURE;
+  LOCATION *func_name = new_location(LOCTOKEN);
+  func_name->token = (TOKEN*)tree->left->right->left->left;
+  define_closure->operand_one = func_name;
+
   TAC *tac_tail = current_tac_tail;
   TAC *tac_head = current_tac_head;
 

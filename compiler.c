@@ -102,6 +102,8 @@ int find_in_memory(LOCATION *tac_location)
 
 MIPS *create_activation_record(TAC *tac_code)
 {
+  //TODO move the enclosing frame into frame
+
   int args = ((LOCATION*)tac_code->destination)->value;
   int locals = ((LOCATION*)tac_code->operand_one)->value;
   int tempories = ((LOCATION*)tac_code->operand_two)->value;
@@ -395,7 +397,6 @@ MIPS *translate_label(TAC *tac_code)
 
 MIPS *translate_function_def(TAC *tac_code)
 {
-
   MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, (long)tac_code->operand_one, 0);
 
   return label_instruction;
@@ -452,6 +453,11 @@ MIPS *put_param_in_memory(TAC *tac_code)
   return load_operand_one;
 }
 
+MIPS *create_closure()
+{
+
+}
+
 MIPS *tac_to_mips(TAC *tac_code)
 {
   switch (tac_code->operation) {
@@ -491,6 +497,8 @@ MIPS *tac_to_mips(TAC *tac_code)
       return put_param_in_memory(tac_code);
     case LOADPARAM:
       return NULL;
+    case CREATE_CLOSURE:
+      return create_closure(tac_code);
   }
 }
 

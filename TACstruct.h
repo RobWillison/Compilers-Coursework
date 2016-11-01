@@ -6,6 +6,7 @@
 #define FUNCTION_DEF 6000
 #define NEWFRAME 7000
 #define LOADPARAM 8000
+#define CREATE_CLOSURE 9000
 
 typedef struct LOCATION
 {
