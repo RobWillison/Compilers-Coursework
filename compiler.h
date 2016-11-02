@@ -1,6 +1,5 @@
 #define INMEMORY 1
 
-
 extern MIPS *translate_tac(TAC *tac);
 
 typedef struct MIPS_FRAME
@@ -12,7 +11,7 @@ typedef struct MIPS_FRAME
 
 typedef struct MIPS_CLOSURE
 {
-  char *name;
+  int name;
   struct MIPS_LOCATION *enclosing_frame;
 } MIPS_CLOSURE;
 

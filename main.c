@@ -413,6 +413,7 @@ int main(int argc, char** argv)
       print_tac(taccode);
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
+      printf("TRANSLATED TO MIPS\n");
       //This will need to change when functions are implemented
       FILE *file = fopen("Output/test.asm", "w");
       fprintf(file, ".globl main\n\n.text\n\n");

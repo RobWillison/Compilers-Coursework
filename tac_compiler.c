@@ -10,13 +10,14 @@
 #include "Memory.h"
 #include "debug.h"
 
-extern TAC *compile(NODE *tree);
+extern void compile_tree(NODE *tree);
 
 int current_reg = 0;
 int current_label = 0;
 
 TAC *current_tac_tail;
 TAC *current_tac_head;
+TAC *global_closure_definitions;
 
 TAC *get_tail(TAC* tac)
 {
@@ -37,6 +38,13 @@ TAC *new_tac()
   tac_struct->destination = 0;
   tac_struct->next = 0;
   tac_struct->label = 0;
+
+  return tac_struct;
+}
+
+TAC *new_tac_add_to_tail()
+{
+  TAC *tac_struct = new_tac();
 
   if (!current_tac_tail) {
     current_tac_tail = tac_struct;
@@ -67,12 +75,12 @@ LOCATION *next_reg()
 
 void compile_math(NODE *tree)
 {
-  compile(tree->left);
+  compile_tree(tree->left);
   LOCATION *operand_one_location = current_tac_tail->destination;
-  compile(tree->right);
+  compile_tree(tree->right);
   LOCATION *operand_two_location = current_tac_tail->destination;
 
-  TAC *operation = new_tac();
+  TAC *operation = new_tac_add_to_tail();
   operation->destination = next_reg();
   operation->operation = tree->type;
 
@@ -82,10 +90,10 @@ void compile_math(NODE *tree)
 
 void compile_return(NODE *tree)
 {
-  compile(tree->left);
+  compile_tree(tree->left);
   LOCATION *return_location = current_tac_tail->destination;
 
-  TAC *return_tac = new_tac();
+  TAC *return_tac = new_tac_add_to_tail();
   return_tac->operation = RETURN;
 
   return_tac->operand_one = return_location;
@@ -97,7 +105,7 @@ void compile_leaf(NODE *tree)
   LOCATION *loc = new_location(LOCTOKEN);
   loc->token = t;
 
-  TAC *taccode = new_tac();
+  TAC *taccode = new_tac_add_to_tail();
   taccode->destination = next_reg();
   taccode->operation = 'S';
   taccode->operand_one = loc;
@@ -108,10 +116,10 @@ void compile_declaration(NODE *tree)
   LOCATION *destination = new_location(LOCTOKEN);
   destination->token = (TOKEN*)tree->right->left->left;
 
-  compile(tree->right->right);
+  compile_tree(tree->right->right);
   LOCATION *operation_destination = current_tac_tail->destination;
 
-  TAC *taccode = new_tac();
+  TAC *taccode = new_tac_add_to_tail();
   taccode->destination = destination;
   taccode->operation = 'S';
 
@@ -128,7 +136,7 @@ void compile_assignment(NODE *tree)
     LOCATION *operand = new_location(LOCTOKEN);
     operand->token = (TOKEN*)tree->right->left;
 
-    TAC *taccode = new_tac();
+    TAC *taccode = new_tac_add_to_tail();
     taccode->destination = destination;
     taccode->operation = 'S';
     taccode->operand_one = operand;
@@ -136,9 +144,9 @@ void compile_assignment(NODE *tree)
     LOCATION *destination = new_location(LOCTOKEN);
     destination->token = (TOKEN*)tree->left->left;
 
-    compile(tree->right);
+    compile_tree(tree->right);
     LOCATION *operation_destination = current_tac_tail->destination;
-    TAC *taccode = new_tac();
+    TAC *taccode = new_tac_add_to_tail();
     taccode->destination = destination;
     taccode->operation = 'S';
     taccode->operand_one = operation_destination;
@@ -147,10 +155,10 @@ void compile_assignment(NODE *tree)
 
 void compile_conditional(NODE *tree)
 {
-  compile(tree->left);
+  compile_tree(tree->left);
   LOCATION *condition_destination = current_tac_tail->destination;
 
-  TAC *if_statement = new_tac();
+  TAC *if_statement = new_tac_add_to_tail();
   if_statement->operation = IF_NOT;
   if_statement->operand_one = condition_destination;
   LOCATION *label = new_location(LABEL);
@@ -160,37 +168,37 @@ void compile_conditional(NODE *tree)
 
   if (tree->right->type != ELSE)
   {
-    compile(tree->right);
+    compile_tree(tree->right);
 
-    TAC *label_tac = new_tac();
+    TAC *label_tac = new_tac_add_to_tail();
     label_tac->operation = LABEL;
     label_tac->label = label->value;
 
     return;
   }
 
-  compile(tree->right->left);
+  compile_tree(tree->right->left);
 
-  TAC *jump_to_end = new_tac();
+  TAC *jump_to_end = new_tac_add_to_tail();
   jump_to_end->operation = JUMP;
   LOCATION *end_label = new_location(LABEL);
   end_label->value = get_label();
   jump_to_end->operand_one = end_label;
 
-  TAC *label_tac = new_tac();
+  TAC *label_tac = new_tac_add_to_tail();
   label_tac->operation = LABEL;
   label_tac->label = label->value;
 
-  compile(tree->right->right);
+  compile_tree(tree->right->right);
 
-  TAC *end_label_tac = new_tac();
+  TAC *end_label_tac = new_tac_add_to_tail();
   end_label_tac->operation = LABEL;
   end_label_tac->label = end_label->value;
 }
 
 void compile_while(NODE *tree)
 {
-  TAC *jump_to_end = new_tac();
+  TAC *jump_to_end = new_tac_add_to_tail();
   jump_to_end->operation = JUMP;
   LOCATION *end_label = new_location(LABEL);
   end_label->value = get_label();
@@ -199,21 +207,21 @@ void compile_while(NODE *tree)
   LOCATION *start_label = new_location(LABEL);
   start_label->value = get_label();
 
-  TAC *label_start = new_tac();
+  TAC *label_start = new_tac_add_to_tail();
   label_start->operation = LABEL;
   label_start->label = start_label->value;
 
-  compile(tree->right);
+  compile_tree(tree->right);
 
-  TAC *label_end = new_tac();
+  TAC *label_end = new_tac_add_to_tail();
   label_end->operation = LABEL;
   label_end->label = end_label->value;
 
 
-  compile(tree->left);
+  compile_tree(tree->left);
   LOCATION *condition_destination = current_tac_tail->destination;
 
-  TAC *if_statement = new_tac();
+  TAC *if_statement = new_tac_add_to_tail();
   if_statement->operation = IF;
 
   if_statement->operand_one = condition_destination;
@@ -271,7 +279,7 @@ void create_load_arg(NODE *tree)
   {
     if (tree->type == '~')
     {
-      TAC* arg = new_tac();
+      TAC* arg = new_tac_add_to_tail();
       arg->operation = LOADPARAM;
       LOCATION *token = new_location(LOCTOKEN);
       token->token = (TOKEN*)tree->right->left;
@@ -297,11 +305,12 @@ LOCATION *find_last_function_def()
 
 void compile_funcion_def(NODE *tree)
 {
-  TAC *define_closure = new_tac();
+  TAC *define_closure = new_tac_add_to_tail();
   define_closure->operation = CREATE_CLOSURE;
   LOCATION *func_name = new_location(LOCTOKEN);
   func_name->token = (TOKEN*)tree->left->right->left->left;
   define_closure->operand_one = func_name;
+
 
   TAC *tac_tail = current_tac_tail;
   TAC *tac_head = current_tac_head;
@@ -309,20 +318,20 @@ void compile_funcion_def(NODE *tree)
   current_tac_tail = 0;
   current_tac_head = 0;
 
-  TAC *function = new_tac();
+  TAC *function = new_tac_add_to_tail();
   function->operation = FUNCTION_DEF;
   LOCATION *location = new_location(LOCTOKEN);
   location->token = (TOKEN*)tree->left->right->left->left;
   function->operand_one = location;
 
-  TAC *frame = new_tac();
+  TAC *frame = new_tac_add_to_tail();
 
   //Allocate Parameters to activation record
   //for each arguments
   create_load_arg(tree->left->right->right);
 
   TAC *body_start = current_tac_tail;
-  compile(tree->right);
+  compile_tree(tree->right);
   //print_tac(body_start->next);
 
   int locals = count_locals(body_start->next);
@@ -344,9 +353,12 @@ void compile_funcion_def(NODE *tree)
   //If the last command in the body isnt a RETURN add one
   TAC *last_tac = get_tail(body_start->next);
   if (last_tac->operation != RETURN) {
-    TAC *return_tac = new_tac();
+    TAC *return_tac = new_tac_add_to_tail();
     return_tac->operation = RETURN;
   };
+
+  TAC *end_tag = new_tac_add_to_tail();
+  end_tag->operation = FUNC_END;
 
   current_tac_tail->next = tac_head;
   current_tac_tail = tac_tail;
@@ -373,10 +385,10 @@ void save_parameters(NODE *tree)
 
   if (tree->type == LEAF)
   {
-    compile(tree);
+    compile_tree(tree);
     LOCATION *compile_destination = current_tac_tail->destination;
 
-    TAC *save_param = new_tac();
+    TAC *save_param = new_tac_add_to_tail();
     save_param->operation = SAVE_PARAM;
     save_param->operand_one = compile_destination;
 
@@ -388,7 +400,7 @@ void save_parameters(NODE *tree)
 
 void store_paraments(NODE *tree)
 {
-  TAC *parameter_setup = new_tac();
+  TAC *parameter_setup = new_tac_add_to_tail();
   parameter_setup->operation = PARAMETER_ALLOCATE;
   LOCATION *param_count = new_location(LOCVALUE);
   param_count->value = count_parameters(tree);
@@ -407,7 +419,7 @@ void compile_apply(NODE *tree)
   //Put address in $a0
   //Put length in $a1
 
-  TAC *jump_to_func = new_tac();
+  TAC *jump_to_func = new_tac_add_to_tail();
   jump_to_func->operation = JUMPTOFUNC;
   LOCATION *func_loc = new_location(LOCTOKEN);
   func_loc->token = (TOKEN*)tree->left->left;
@@ -417,7 +429,7 @@ void compile_apply(NODE *tree)
   jump_to_func->destination = return_reg;
 }
 
-TAC *compile(NODE *tree)
+void compile_tree(NODE *tree)
 {
   printf("NEXT TREE\n");
   print_tree(tree);
@@ -444,8 +456,8 @@ TAC *compile(NODE *tree)
     case '~':
       if (tree->left->type == 'D')
       {
-        compile(tree->left);
-        compile(tree->right);
+        compile_tree(tree->left);
+        compile_tree(tree->right);
       } else {
         compile_declaration(tree);
       }
@@ -469,9 +481,14 @@ TAC *compile(NODE *tree)
 
   if (tree->type == ';')
   {
-    compile(tree->left);
-    compile(tree->right);
+    compile_tree(tree->left);
+    compile_tree(tree->right);
   }
+}
+
+TAC *compile(NODE *tree)
+{
+  compile_tree(tree);
 
   return current_tac_head;
 }

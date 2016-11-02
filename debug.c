@@ -200,6 +200,8 @@ void print_tac(TAC *tac_code)
     printf("SAVE PARAM %s\n", get_location(tac_code->operand_one));
   } else if (tac_code->operation == LOADPARAM){
     printf("LOAD PARAM %s\n", ((TOKEN*)((LOCATION*)tac_code->destination)->token)->lexeme);
+  } else if (tac_code->operation == FUNC_END){
+    printf("FUNCTION END\n");
   } else {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
@@ -261,6 +263,11 @@ void print_mips(MIPS *mips, FILE *file)
       fprintf(file, "%s function%d\n", get_instruction(mips->instruction), mips->operand_one);
       break;
     case FUNCTION_DEF:
+      if (mips->operand_one == MAIN_FUNC)
+      {
+        fprintf(file, "main:\n");
+        break;
+      }
       fprintf(file, "function%d:\n", mips->operand_one);
       break;
     case SYSCALL:
