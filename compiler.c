@@ -217,8 +217,6 @@ void store_closure(TOKEN *name, MIPS_LOCATION *fp_location)
 
 MIPS *create_activation_record(TAC *tac_code)
 {
-  //TODO move the enclosing frame into frame
-
   int args = ((LOCATION*)tac_code->destination)->value;
   int locals = ((LOCATION*)tac_code->operand_one)->value;
   int tempories = ((LOCATION*)tac_code->operand_two)->value;
@@ -257,6 +255,11 @@ MIPS *create_activation_record(TAC *tac_code)
   //Store the $ra in the 2nd place in the frame
   MIPS *save_return = create_mips_instruction(STOREWORD, 30, 4, 31);
   store_instruction->next = save_return;
+
+  //move the enclosing frame into frame
+  //Store the $ra in the 2nd place in the frame
+  MIPS *store_enclosing = create_mips_instruction(STOREWORD, 30, 8, 5);
+  save_return->next = store_enclosing;
 
   //for each load param which follows load the paramenter
   tac_code = tac_code->next;
@@ -535,11 +538,21 @@ MIPS *translate_jump(TAC *tac_code)
 
 MIPS *translate_jump_to_func(TAC *tac_code)
 {
+  MIPS_CLOSURE *closure = get_closure_from_env(tac_code->operand_one);
+  LOCATION *location = tac_code->operand_one;
+  TOKEN *token = location->token;
+  int name = find_func_name(token);
 
-  LOCATION *operand_one = tac_code->operand_one;
-  TOKEN *token = operand_one->token;
-  int function = find_func_name(token);
-  MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, function, 0);
+  MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, name, 0);
+
+  if (closure) {
+    printf("TEST %d\n", closure->name);
+    MIPS_LOCATION *location = closure->enclosing_frame;
+    MIPS *load_enclosing_scope = create_mips_instruction(LOADWORD_INS, 5, 30, location->memory_frame_location);
+    load_enclosing_scope->next = jump_instruction;
+
+    return load_enclosing_scope;
+  }
 
   return jump_instruction;
 }
