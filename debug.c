@@ -156,6 +156,12 @@ void print_tac(TAC *tac_code)
   if (tac_code->operation == 'S') {
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
+    LOCATION *operand_two = tac_code->operand_two;
+    if (operand_two)
+    {
+      int scope = operand_two->value;
+      printf("DEFINED IN %d ", scope);
+    }
     printf("%s := %s\n", get_location(destination), get_location(operand_one));
   } else if (tac_code->operation == RETURN){
     if (tac_code->operand_one){

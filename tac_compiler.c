@@ -12,8 +12,16 @@
 
 extern void compile_tree(NODE *tree);
 
+typedef struct TAC_FRAME {
+  struct TOKEN *token;
+  struct TAC_FRAME *prev;
+} TAC_FRAME;
+
+
 int current_reg = 0;
 int current_label = 0;
+
+TAC_FRAME *tac_env = NULL;
 
 TAC *current_tac_tail;
 TAC *current_tac_head;
@@ -24,6 +32,38 @@ TAC *get_tail(TAC* tac)
   if (tac->next) return get_tail(tac->next);
 
   return tac;
+}
+
+void addToCurrentScope(TOKEN *new_token)
+{
+  TOKEN *token = tac_env->token;
+  if (!token)
+  {
+    tac_env->token = new_token;
+    return;
+  }
+
+  while (token->next) token = token->next;
+
+  token->next = new_token;
+}
+//returns the number of scopes up the token is defined
+int whereIsTokenDefined(TOKEN *look_token)
+{
+  int scopes = 0;
+  TAC_FRAME *env = tac_env;
+
+  while(env)
+  {
+    TOKEN *token = env->token;
+    while (token)
+    {
+      if (token == look_token) return scopes;
+      token = token->next;
+    }
+    scopes++;
+    env = env->prev;
+  }
 }
 
 int get_label()
@@ -105,16 +145,25 @@ void compile_leaf(NODE *tree)
   LOCATION *loc = new_location(LOCTOKEN);
   loc->token = t;
 
+  int definedScope = whereIsTokenDefined(t);
+
   TAC *taccode = new_tac_add_to_tail();
   taccode->destination = next_reg();
   taccode->operation = 'S';
   taccode->operand_one = loc;
+
+  LOCATION *scope = new_location(LOCVALUE);
+  scope->value = definedScope;
+
+  taccode->operand_two = scope;
 }
 
 void compile_declaration(NODE *tree)
 {
   LOCATION *destination = new_location(LOCTOKEN);
   destination->token = (TOKEN*)tree->right->left->left;
+
+  addToCurrentScope(destination->token);
 
   compile_tree(tree->right->right);
   LOCATION *operation_destination = current_tac_tail->destination;
@@ -305,6 +354,10 @@ LOCATION *find_last_function_def()
 
 void compile_funcion_def(NODE *tree)
 {
+  TAC_FRAME *new_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
+  new_frame->prev = tac_env;
+  tac_env = new_frame;
+
   TAC *define_closure = new_tac_add_to_tail();
   define_closure->operation = CREATE_CLOSURE;
   LOCATION *func_name = new_location(LOCTOKEN);
@@ -356,6 +409,7 @@ void compile_funcion_def(NODE *tree)
     TAC *return_tac = new_tac_add_to_tail();
     return_tac->operation = RETURN;
   };
+
 
   TAC *end_tag = new_tac_add_to_tail();
   end_tag->operation = FUNC_END;

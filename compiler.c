@@ -43,6 +43,20 @@ int find_func_name(TOKEN *function)
   return function_count;
 }
 
+MIPS *getEnclosingScope(int scopes)
+{
+  MIPS *initial = create_mips_instruction(MOVE, 0, 15, 30);
+  MIPS *scope = initial;
+  int i;
+  for (i = 0; i < scopes; i++)
+  {
+    scope->next = create_mips_instruction(LOADWORD_INS, 15, 15, 8);
+    scope = scope->next;
+  }
+
+  return initial;
+}
+
 void add_MIPS_to_list(MIPS *front, MIPS *tail)
 {
   while (front->next != 0) front = front->next;
@@ -67,20 +81,13 @@ VARIABLE* new_variable(TOKEN *token, UNION *value)
   return ans;
 }
 
-void add_binding_to_env(MIPS_BINDING *binding)
-{
-  MIPS_BINDING *pointer = mips_env->bindings;
-  while(pointer->next) pointer = pointer->next;
-  pointer->next = binding;
-}
-
 MIPS_STORED_VALUE *get_location_from_env(LOCATION* location)
 {
+  TOKEN *token = location->token;
 
   MIPS_FRAME *frame_pointer = mips_env;
   while (frame_pointer)
   {
-
     MIPS_BINDING *binding = frame_pointer->bindings;
 
     while (binding)
@@ -160,6 +167,7 @@ int store_value(LOCATION *tac_location)
   MIPS_BINDING *new_binding = (MIPS_BINDING*)malloc(sizeof(MIPS_BINDING));
   new_binding->next = NULL;
   new_binding->tac_location = tac_location;
+
   if (binding) {
     binding->next = new_binding;
   } else {
@@ -203,6 +211,7 @@ void store_closure(TOKEN *name, MIPS_LOCATION *fp_location)
   LOCATION *tac_location = new_location(LOCTOKEN);
   tac_location->token = name;
   new_binding->tac_location = tac_location;
+
   if (binding) {
     binding->next = new_binding;
   } else {
@@ -293,7 +302,6 @@ MIPS *translate_store(TAC *tac_code)
   MIPS *load_instruction;
   if (operand->type == LOCTOKEN)
   {
-
     //if its in a token i.e. value or variable
     TOKEN *token = operand->token;
     if (token->type == CONSTANT)
@@ -301,8 +309,24 @@ MIPS *translate_store(TAC *tac_code)
       //Its a value do a load imediate
       load_instruction = create_mips_instruction(LOADIMEDIATE_INS, 8, token->value, 0);
     } else {
-      //Its a value do a load imediate
-      load_instruction = create_mips_instruction(LOADWORD_INS, 8, 30, get_memory_location_from_env(operand));
+      //Its a token do a lookup and load
+      LOCATION *scope = tac_code->operand_two;
+      int scopeDefined = scope->value;
+      int framePointer = 30;
+      MIPS *getEnclosing = NULL;
+
+      if (scopeDefined)
+      {
+        getEnclosing = getEnclosingScope(scopeDefined);
+        framePointer = 15;
+      }
+
+      load_instruction = create_mips_instruction(LOADWORD_INS, 8, framePointer, get_memory_location_from_env(operand));
+      if (getEnclosing)
+      {
+        add_MIPS_to_list(getEnclosing, load_instruction);
+        load_instruction = getEnclosing;
+      }
     }
   } else {
     //If its in a memory location
@@ -312,6 +336,7 @@ MIPS *translate_store(TAC *tac_code)
   MIPS *store_instruction;
 
   int in_memory = get_memory_location_from_env(destination);
+
   if (in_memory == -1) {
     int new_location = store_value(tac_code->destination);
     store_instruction = create_mips_instruction(STOREWORD, 30, new_location, load_instruction->destination);
@@ -319,7 +344,7 @@ MIPS *translate_store(TAC *tac_code)
     store_instruction = create_mips_instruction(STOREWORD, 30, in_memory, load_instruction->destination);
   }
 
-  load_instruction->next = store_instruction;
+  add_MIPS_to_list(load_instruction, store_instruction);
 
   return load_instruction;
 }
@@ -517,13 +542,12 @@ MIPS *translate_function_def(TAC *tac_code)
 
   int function_name = find_func_name(token);
 
+  MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, function_name, 0);
+
   MIPS_FRAME *new_mips_env = (MIPS_FRAME*)malloc(sizeof(MIPS_FRAME));
   new_mips_env->prev = mips_env;
   new_mips_env->bindings = NULL;
-
   mips_env = new_mips_env;
-
-  MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, function_name, 0);
 
   return label_instruction;
 }
@@ -546,7 +570,6 @@ MIPS *translate_jump_to_func(TAC *tac_code)
   MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, name, 0);
 
   if (closure) {
-    printf("TEST %d\n", closure->name);
     MIPS_LOCATION *location = closure->enclosing_frame;
     MIPS *load_enclosing_scope = create_mips_instruction(LOADWORD_INS, 5, 30, location->memory_frame_location);
     load_enclosing_scope->next = jump_instruction;
@@ -667,6 +690,7 @@ MIPS *check_if_at_end(TAC *tac_code)
 {
   //At end of func so return to previous enviroment
   mips_env = mips_env->prev;
+
   //if true we are end of user code
   if (tac_code->next->operation == CREATE_CLOSURE)
   {
