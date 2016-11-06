@@ -17,12 +17,17 @@ typedef struct TAC_FRAME {
   struct TAC_FRAME *prev;
 } TAC_FRAME;
 
+typedef struct FUNCTION_TAC {
+  struct TAC *tac;
+  struct FUNCTION_TAC *next;
+} FUNCTION_TAC;
 
 int current_reg = 0;
 int current_label = 0;
 
 TAC_FRAME *tac_env = NULL;
 
+FUNCTION_TAC *tacFunctionList = NULL;
 TAC *current_tac_tail;
 TAC *current_tac_head;
 TAC *global_closure_definitions;
@@ -354,22 +359,24 @@ LOCATION *find_last_function_def()
 
 void compile_funcion_def(NODE *tree)
 {
+  FUNCTION_TAC *newFunction = (FUNCTION_TAC*)malloc(sizeof(FUNCTION_TAC));
+  FUNCTION_TAC *pointer = tacFunctionList;
+
+  current_tac_head = newFunction->tac;
+  current_tac_tail = newFunction->tac;
+
+  if (!pointer)
+  {
+    tacFunctionList = newFunction;
+  } else {
+    while(pointer->next) pointer = pointer->next;
+    pointer->next = newFunction;
+  }
+
+
   TAC_FRAME *new_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
   new_frame->prev = tac_env;
   tac_env = new_frame;
-
-  TAC *define_closure = new_tac_add_to_tail();
-  define_closure->operation = CREATE_CLOSURE;
-  LOCATION *func_name = new_location(LOCTOKEN);
-  func_name->token = (TOKEN*)tree->left->right->left->left;
-  define_closure->operand_one = func_name;
-
-
-  TAC *tac_tail = current_tac_tail;
-  TAC *tac_head = current_tac_head;
-
-  current_tac_tail = 0;
-  current_tac_head = 0;
 
   TAC *function = new_tac_add_to_tail();
   function->operation = FUNCTION_DEF;
@@ -414,8 +421,11 @@ void compile_funcion_def(NODE *tree)
   TAC *end_tag = new_tac_add_to_tail();
   end_tag->operation = FUNC_END;
 
-  current_tac_tail->next = tac_head;
-  current_tac_tail = tac_tail;
+  TAC *define_closure = new_tac_add_to_tail();
+  define_closure->operation = CREATE_CLOSURE;
+  LOCATION *func_name = new_location(LOCTOKEN);
+  func_name->token = (TOKEN*)tree->left->right->left->left;
+  define_closure->operand_one = func_name;
 }
 
 int count_parameters(NODE *tree)
@@ -540,9 +550,35 @@ void compile_tree(NODE *tree)
   }
 }
 
+TAC *getTac()
+{
+  current_tac_tail = 0;
+  current_tac_head = 0;
+
+  while (tacFunctionList)
+  {
+    if (!current_tac_tail)
+    {
+      current_tac_head = tacFunctionList->tac;
+      current_tac_tail = tacFunctionList->tac;
+
+      while (current_tac_tail->next) current_tac_tail = current_tac_tail->next;
+    } else {
+
+      current_tac_tail->next = tacFunctionList->tac;
+      tacFunctionList = tacFunctionList->next;
+
+      while (current_tac_tail->next) current_tac_tail = current_tac_tail->next;
+    }
+  }
+
+  return current_tac_head;
+}
+
+
 TAC *compile(NODE *tree)
 {
   compile_tree(tree);
 
-  return current_tac_head;
+  return getTac();
 }
