@@ -1,3 +1,4 @@
+
 extern void print_variable_list(VARIABLE *pointer);
 
 extern void print_enviroment(FRAME *enviroment);
