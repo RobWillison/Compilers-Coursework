@@ -339,9 +339,10 @@ MIPS *translate_store(TAC *tac_code)
 
   if (in_memory == -1) {
     int new_location = store_value(tac_code->destination);
-    store_instruction = create_mips_instruction(STOREWORD, 30, new_location, load_instruction->destination);
+    printf("%d\n", load_instruction->destination);
+    store_instruction = create_mips_instruction(STOREWORD, 30, new_location, 8);
   } else {
-    store_instruction = create_mips_instruction(STOREWORD, 30, in_memory, load_instruction->destination);
+    store_instruction = create_mips_instruction(STOREWORD, 30, in_memory, 8);
   }
 
   add_MIPS_to_list(load_instruction, store_instruction);
@@ -685,7 +686,7 @@ MIPS *create_global_scope(TAC *tac_code)
 MIPS *check_if_at_end(TAC *tac_code)
 {
   //At end of func so return to previous enviroment
-  mips_env = mips_env->prev;
+  //mips_env = mips_env->prev;
 
   //if true we are end of user code
   if (!tac_code->next)
@@ -699,7 +700,6 @@ MIPS *check_if_at_end(TAC *tac_code)
 
 MIPS *tac_to_mips(TAC *tac_code)
 {
-  printf("%d\n", tac_code->operation);
   switch (tac_code->operation) {
     case 'S':
       return translate_store(tac_code);
