@@ -17,6 +17,12 @@ typedef struct TAC_FRAME {
   struct TAC_FRAME *prev;
 } TAC_FRAME;
 
+typedef struct FUNCTION_ITEM {
+  struct TAC *tac;
+  struct FUNCTION_ITEM *next;
+} FUNCTION_ITEM ;
+
+FUNCTION_ITEM *function_list = NULL;
 
 int current_reg = 0;
 int current_label = 0;
@@ -354,6 +360,16 @@ LOCATION *find_last_function_def()
 
 void compile_funcion_def(NODE *tree)
 {
+  FUNCTION_ITEM *new_function = (FUNCTION_ITEM*)malloc(sizeof(FUNCTION_ITEM));
+
+  if (!function_list) {
+    function_list = new_function;
+  } else {
+    FUNCTION_ITEM *pointer = function_list;
+    while(pointer->next) pointer = pointer->next;
+    pointer->next = new_function;
+  }
+
   TAC_FRAME *new_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
   new_frame->prev = tac_env;
   tac_env = new_frame;
@@ -364,9 +380,8 @@ void compile_funcion_def(NODE *tree)
   func_name->token = (TOKEN*)tree->left->right->left->left;
   define_closure->operand_one = func_name;
 
-
-  TAC *tac_tail = current_tac_tail;
-  TAC *tac_head = current_tac_head;
+  TAC *last_head = current_tac_head;
+  TAC *last_tail = current_tac_tail;
 
   current_tac_tail = 0;
   current_tac_head = 0;
@@ -414,8 +429,11 @@ void compile_funcion_def(NODE *tree)
   TAC *end_tag = new_tac_add_to_tail();
   end_tag->operation = FUNC_END;
 
-  current_tac_tail->next = tac_head;
-  current_tac_tail = tac_tail;
+  new_function->tac = current_tac_head;
+
+  current_tac_head = last_head;
+  current_tac_tail = last_tail;
+
 }
 
 int count_parameters(NODE *tree)
@@ -540,9 +558,30 @@ void compile_tree(NODE *tree)
   }
 }
 
+TAC *getTac()
+{
+  TAC *head = NULL;
+  FUNCTION_ITEM *function_pointer = function_list;
+
+  while (function_pointer)
+  {
+    if (!head){
+        head = function_pointer->tac;
+    } else {
+      head->next = function_pointer->tac;
+    }
+
+    while (head->next) head = head->next;
+
+    function_pointer = function_pointer->next;
+  }
+
+  return function_list->tac;
+}
+
 TAC *compile(NODE *tree)
 {
   compile_tree(tree);
 
-  return current_tac_head;
+  return getTac();
 }

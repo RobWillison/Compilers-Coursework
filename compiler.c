@@ -669,13 +669,9 @@ MIPS *create_global_scope(TAC *tac_code)
     pointer = pointer->next;
   }
 
-  MIPS *definitons = translate_tac_instruction(tac_code->next);
-  tac_code->next = 0;
-
-  save_return->next = definitons;
-
   MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, main_name, 0);
-  add_MIPS_to_list(definitons, jump_instruction);
+
+  save_return->next = jump_instruction;
 
   MIPS *load_return_address = create_mips_instruction(LOADWORD_INS, 8, 30, 4);
   jump_instruction->next = load_return_address;
@@ -692,7 +688,7 @@ MIPS *check_if_at_end(TAC *tac_code)
   mips_env = mips_env->prev;
 
   //if true we are end of user code
-  if (tac_code->next->operation == CREATE_CLOSURE)
+  if (!tac_code->next)
   {
     //create main function and setup global scope
     return create_global_scope(tac_code);
@@ -703,6 +699,7 @@ MIPS *check_if_at_end(TAC *tac_code)
 
 MIPS *tac_to_mips(TAC *tac_code)
 {
+  printf("%d\n", tac_code->operation);
   switch (tac_code->operation) {
     case 'S':
       return translate_store(tac_code);
