@@ -440,7 +440,7 @@ int count_parameters(NODE *tree)
 {
   if (!tree) return 0;
   int count = 0;
-  if (tree->type == LEAF)
+  if (tree->type != ',')
   {
     count = count + 1;
   } else {
@@ -455,7 +455,7 @@ void save_parameters(NODE *tree)
 {
   if (!tree) return;
 
-  if (tree->type == LEAF)
+  if (tree->type != ',')
   {
     compile_tree(tree);
     LOCATION *compile_destination = current_tac_tail->destination;

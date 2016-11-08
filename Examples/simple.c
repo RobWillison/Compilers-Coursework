@@ -1,11 +1,13 @@
-int test()
-{
-  int x = 6;
-  int test2() {return x;}
-  return test2();
+int fact(int n) {
+    int inner_fact(int n, int a) {
+      if (n==0) return a;
+        return inner_fact(n-1,a*n);
+      }
+    return inner_fact(n,1);
 }
+
 
 int main()
 {
-  return test();
+  return fact(0);
 }
