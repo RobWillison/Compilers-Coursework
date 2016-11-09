@@ -483,22 +483,35 @@ void store_paraments(NODE *tree)
 
 void compile_apply(NODE *tree)
 {
+  if (tree->left->type == LEAF) {
+    store_paraments(tree->right);
 
-  store_paraments(tree->right);
+    //Allocate those bytes
+    //Put values in
+    //Put address in $a0
+    //Put length in $a1
 
-  //Allocate those bytes
-  //Put values in
-  //Put address in $a0
-  //Put length in $a1
+    TAC *jump_to_func = new_tac_add_to_tail();
+    jump_to_func->operation = JUMPTOFUNC;
+    LOCATION *func_loc = new_location(LOCTOKEN);
+    func_loc->token = (TOKEN*)tree->left->left;
+    jump_to_func->operand_one = func_loc;
+    LOCATION *return_reg = new_location(LOCREG);
+    return_reg->reg = RETURN_REG;
+    jump_to_func->destination = return_reg;
+  } else {
+    compile_tree(tree->left);
+    LOCATION *function_location = current_tac_tail->destination;
 
-  TAC *jump_to_func = new_tac_add_to_tail();
-  jump_to_func->operation = JUMPTOFUNC;
-  LOCATION *func_loc = new_location(LOCTOKEN);
-  func_loc->token = (TOKEN*)tree->left->left;
-  jump_to_func->operand_one = func_loc;
-  LOCATION *return_reg = new_location(LOCREG);
-  return_reg->reg = RETURN_REG;
-  jump_to_func->destination = return_reg;
+    store_paraments(tree->right);
+
+    TAC *jump_to_func = new_tac_add_to_tail();
+    jump_to_func->operation = JUMPTOFUNC;
+    jump_to_func->operand_one = function_location;
+    LOCATION *return_reg = new_location(LOCREG);
+    return_reg->reg = RETURN_REG;
+    jump_to_func->destination = return_reg;
+  }
 }
 
 void compile_tree(NODE *tree)

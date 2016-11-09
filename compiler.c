@@ -121,6 +121,13 @@ int get_memory_location_from_env(LOCATION *location)
   MIPS_STORED_VALUE *result = get_location_from_env(location);
 
   if (result == NULL) return -1;
+
+  if (result->type == FUNCTION)
+  {
+    MIPS_CLOSURE *closure = (MIPS_CLOSURE*)result->closure;
+    return ((MIPS_LOCATION*)closure->enclosing_frame)->memory_frame_location;
+  }
+
   return ((MIPS_LOCATION*)result->location)->memory_frame_location;
 }
 
@@ -189,6 +196,7 @@ int store_value(LOCATION *tac_location)
 void store_closure(TOKEN *name, MIPS_LOCATION *fp_location)
 {
   //Lookup name in function list
+
   int func_name = find_func_name(name);
 
   MIPS_CLOSURE *closure = (MIPS_CLOSURE*)malloc(sizeof(MIPS_CLOSURE));
@@ -304,6 +312,7 @@ MIPS *translate_store(TAC *tac_code)
   {
     //if its in a token i.e. value or variable
     TOKEN *token = operand->token;
+
     if (token->type == CONSTANT)
     {
       //Its a value do a load imediate
@@ -339,7 +348,6 @@ MIPS *translate_store(TAC *tac_code)
 
   if (in_memory == -1) {
     int new_location = store_value(tac_code->destination);
-    printf("%d\n", load_instruction->destination);
     store_instruction = create_mips_instruction(STOREWORD, 30, new_location, 8);
   } else {
     store_instruction = create_mips_instruction(STOREWORD, 30, in_memory, 8);
@@ -364,6 +372,7 @@ MIPS *translate_math(TAC *tac_code)
   MIPS *store_instruction;
   //Save the result
   int in_memory = get_memory_location_from_env(tac_code->destination);
+
   if (in_memory != -1) {
     store_instruction = create_mips_instruction(STOREWORD, 30, in_memory, math_instruction->destination);
   } else {
@@ -415,11 +424,10 @@ MIPS *translate_equality_check(TAC *tac_code)
   {
     //As this gives 0 if equal and 1 otherwise we need to flip the LSB
     MIPS *xor = create_mips_instruction(XOR_IMEDIATE_INS, 8, less_than->destination, 1);
-    store_instruction->operand_one = xor->destination;
+    store_instruction->operand_two = xor->destination;
 
     less_than->next = xor;
     xor->next = store_instruction;
-
     return load_operand_one;
   }
 
@@ -564,8 +572,10 @@ MIPS *translate_jump(TAC *tac_code)
 MIPS *translate_jump_to_func(TAC *tac_code)
 {
   MIPS_CLOSURE *closure = get_closure_from_env(tac_code->operand_one);
+
   LOCATION *location = tac_code->operand_one;
   TOKEN *token = location->token;
+
   int name = find_func_name(token);
 
   MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, name, 0);
@@ -619,13 +629,13 @@ MIPS *put_param_in_memory(TAC *tac_code)
 MIPS *create_closure(TAC *tac_code)
 {
   TOKEN *token = (TOKEN*)((LOCATION*)tac_code->operand_one)->token;
+  int function_name = find_func_name(token);
 
   MIPS_LOCATION *enclosing_frame = (MIPS_LOCATION*)malloc(sizeof(MIPS_LOCATION));
   enclosing_frame->type = INMEMORY;
   enclosing_frame->memory_frame_location = get_next_free_memory();
 
   store_closure(token, enclosing_frame);
-
 
   //Mips Save Value Of $fp
   MIPS *save_fp = create_mips_instruction(STOREWORD, 30, enclosing_frame->memory_frame_location, 30);
@@ -659,10 +669,12 @@ MIPS *create_global_scope(TAC *tac_code)
   //Call the users main function
   //Find in enviroment
   FUNCTION_NAME *pointer = function_lookup_list;
+
   int main_name;
   while (pointer)
   {
     TOKEN *token = (TOKEN*)pointer->token;
+
     if (strcmp(token->lexeme, "main") == 0)
     {
       main_name = pointer->name;
@@ -700,6 +712,7 @@ MIPS *check_if_at_end(TAC *tac_code)
 
 MIPS *tac_to_mips(TAC *tac_code)
 {
+  printf("%d\n", tac_code->operation);
   switch (tac_code->operation) {
     case 'S':
       return translate_store(tac_code);
