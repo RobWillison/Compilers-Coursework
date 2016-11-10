@@ -64,10 +64,11 @@ int whereIsTokenDefined(TOKEN *look_token)
 {
   int scopes = 0;
   TAC_FRAME *env = tac_env;
-
+  if (look_token->type == CONSTANT) return 0;
   while(env)
   {
     TOKEN *token = env->token;
+
     while (token)
     {
       if (token == look_token) return scopes;
@@ -76,6 +77,8 @@ int whereIsTokenDefined(TOKEN *look_token)
     scopes++;
     env = env->prev;
   }
+
+  return 0;
 }
 
 int get_label()
@@ -347,6 +350,8 @@ void create_load_arg(NODE *tree)
       LOCATION *token = new_location(LOCTOKEN);
       token->token = (TOKEN*)tree->right->left;
       arg->destination = token;
+
+      addToCurrentScope(token->token);
     } else {
       create_load_arg(tree->left);
       create_load_arg(tree->right);
@@ -357,7 +362,6 @@ void create_load_arg(NODE *tree)
 void compile_funcion_def(NODE *tree)
 {
   FUNCTION_ITEM *new_function = (FUNCTION_ITEM*)malloc(sizeof(FUNCTION_ITEM));
-
   FUNCTION_ITEM *pointer = function_list;
   while(pointer->next) pointer = pointer->next;
   pointer->next = new_function;
@@ -387,6 +391,7 @@ void compile_funcion_def(NODE *tree)
 
   //Allocate Parameters to activation record
   //for each arguments
+
   create_load_arg(tree->left->right->right);
 
   compile_tree(tree->right);
@@ -484,24 +489,39 @@ void compile_apply(NODE *tree)
 
     LOCATION *scope = new_location(LOCVALUE);
     scope->value = whereIsTokenDefined(func_loc->token);
+
     jump_to_func->operand_two = scope;
 
     jump_to_func->operand_one = func_loc;
     LOCATION *return_reg = new_location(LOCREG);
     return_reg->reg = RETURN_REG;
     jump_to_func->destination = return_reg;
+
+    TAC *save_return = new_tac_add_to_tail();
+    save_return->operation = 'S';
+    save_return->destination = next_reg();
+    save_return->operand_one = return_reg;
   } else {
     compile_tree(tree->left);
     LOCATION *function_location = get_last_instruction_destination(current_function->tac);
 
     store_paraments(tree->right);
 
+    LOCATION *scope = new_location(LOCVALUE);
+    scope->value = 0;
+
     TAC *jump_to_func = new_tac_add_to_tail();
     jump_to_func->operation = JUMPTOFUNC;
     jump_to_func->operand_one = function_location;
+    jump_to_func->operand_two = scope;
     LOCATION *return_reg = new_location(LOCREG);
     return_reg->reg = RETURN_REG;
     jump_to_func->destination = return_reg;
+
+    TAC *save_return = new_tac_add_to_tail();
+    save_return->operation = 'S';
+    save_return->destination = next_reg();
+    save_return->operand_one = return_reg;
   }
 }
 

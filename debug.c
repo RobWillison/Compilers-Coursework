@@ -182,7 +182,6 @@ void print_tac(TAC *tac_code)
     LOCATION *operand_one = tac_code->operand_one;
     printf("GOTO %d\n", operand_one->value);
   } else if (tac_code->operation == JUMPTOFUNC){
-
     LOCATION *operand_one = tac_code->operand_one;
     int scope = ((LOCATION*)tac_code->operand_two)->value;
     printf("CALL %s FROM SCOPE %d\n", get_location(operand_one), scope);

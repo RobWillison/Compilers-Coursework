@@ -9,5 +9,5 @@ int fact(int n) {
 
 int main()
 {
-  return fact(4);
+  return fact(1);
 }

@@ -278,8 +278,14 @@ MIPS *translate_store(TAC *tac_code)
       }
     }
   } else {
-    //If its in a memory location
-    load_instruction = create_mips_instruction(LOADWORD_INS, 8, 30, get_memory_location_from_env(tac_code->operand_one));
+    //If its in a register location
+    LOCATION *location = tac_code->operand_one;
+    if (location->reg == RETURN_REG)
+    {
+      load_instruction = create_mips_instruction(MOVE, 0, 8, 2);
+    } else {
+      load_instruction = create_mips_instruction(LOADWORD_INS, 8, 30, get_memory_location_from_env(tac_code->operand_one));
+    }
   }
 
   MIPS *store_instruction;
@@ -511,9 +517,13 @@ MIPS *translate_jump(TAC *tac_code)
 MIPS *translate_jump_to_func(TAC *tac_code)
 {
   int scope_defined = ((LOCATION*)tac_code->operand_two)->value;
-  int closure = get_memory_location_from_env(tac_code->operand_one);
 
-  MIPS *closure_object = create_mips_instruction(LOADWORD_INS, 8, 30, closure);
+  LOCATION *closure_location = tac_code->operand_one;
+  MIPS *closure_object = NULL;
+
+  int closure = get_memory_location_from_env(tac_code->operand_one);
+  closure_object = create_mips_instruction(LOADWORD_INS, 8, 30, closure);
+
   MIPS *getScope = NULL;
   if (scope_defined)
   {
