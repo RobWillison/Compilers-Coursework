@@ -64,7 +64,7 @@ void store_variable(FRAME *enviroment, TOKEN *token, UNION *value)
 UNION* lookup_variable(FRAME *enviroment, TOKEN *target_token)
 {
   //Loop Through Frames
-  while(enviroment->value != 0)
+  while(enviroment)
   {
     VARIABLE *pointer = (VARIABLE*)enviroment->value;
     //Loop through variables in frame
@@ -300,6 +300,10 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
         result->value = ((TOKEN*)tree->right->right->left)->value;
 
         store_variable(enviroment, token, result);
+      } else {
+        TOKEN *target_token = (TOKEN*)tree->right->right->left;
+        TOKEN *destination_token = (TOKEN*)tree->right->left->left;
+        store_variable(enviroment, destination_token, lookup_variable(enviroment, target_token));
       }
       return;
     case 'D':
