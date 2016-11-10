@@ -1,8 +1,9 @@
 int main()
 {
-  int y(int o) {return 0; }
+  int o = 9;
+  int y() {return o; }
 
   function x  = y;
 
-  return x(0);
+  return x();
 }

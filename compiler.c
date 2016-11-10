@@ -12,6 +12,7 @@
 #include "compiler.h"
 
 extern MIPS *translate_tac_instruction();
+extern MIPS *tac_to_mips();
 
 MIPS_FRAME *mips_env = NULL;
 
@@ -81,7 +82,7 @@ VARIABLE* new_variable(TOKEN *token, UNION *value)
   return ans;
 }
 
-MIPS_STORED_VALUE *get_location_from_env(LOCATION* location)
+MIPS_LOCATION *get_location_from_env(LOCATION* location)
 {
   TOKEN *token = location->token;
 
@@ -98,7 +99,7 @@ MIPS_STORED_VALUE *get_location_from_env(LOCATION* location)
       if ((location->type == LOCREG && binding_loc->reg == location->reg)
               || (location->type == LOCTOKEN && binding_loc->token == location->token))
       {
-        return binding->value;
+        return binding->location;
       }
       binding = binding->next;
     }
@@ -109,26 +110,13 @@ MIPS_STORED_VALUE *get_location_from_env(LOCATION* location)
   return NULL;
 }
 
-MIPS_CLOSURE *get_closure_from_env(LOCATION *closure)
-{
-  MIPS_STORED_VALUE *value = get_location_from_env(closure);
-  if (!value) return NULL;
-  return (MIPS_CLOSURE*)value->closure;
-}
-
 int get_memory_location_from_env(LOCATION *location)
 {
-  MIPS_STORED_VALUE *result = get_location_from_env(location);
+  MIPS_LOCATION *result = get_location_from_env(location);
 
   if (result == NULL) return -1;
 
-  if (result->type == FUNCTION)
-  {
-    MIPS_CLOSURE *closure = (MIPS_CLOSURE*)result->closure;
-    return ((MIPS_LOCATION*)closure->enclosing_frame)->memory_frame_location;
-  }
-
-  return ((MIPS_LOCATION*)result->location)->memory_frame_location;
+  return result->memory_frame_location;
 }
 
 int get_next_free_memory()
@@ -143,15 +131,10 @@ int get_next_free_memory()
   int last_used_memory = 12;
   while (binding)
   {
-    MIPS_STORED_VALUE *stored_value = (MIPS_STORED_VALUE*)binding->value;
+    MIPS_LOCATION *stored_value = (MIPS_LOCATION*)binding->location;
 
-    if (stored_value->type == CONSTANT)
-    {
-      last_used_memory = ((MIPS_LOCATION*)stored_value->location)->memory_frame_location;
-    } else {
-      MIPS_CLOSURE *closure = (MIPS_CLOSURE*)stored_value->closure;
-      last_used_memory = ((MIPS_LOCATION*)closure->enclosing_frame)->memory_frame_location;
-    }
+    last_used_memory = stored_value->memory_frame_location;
+
     binding = binding->next;
   }
 
@@ -181,55 +164,12 @@ int store_value(LOCATION *tac_location)
     mips_env->bindings = new_binding;
   }
 
-  MIPS_STORED_VALUE *new_value = (MIPS_STORED_VALUE*)malloc(sizeof(MIPS_STORED_VALUE));
-  new_value->type = CONSTANT;
-  new_binding->value = new_value;
-
   MIPS_LOCATION *new_location = (MIPS_LOCATION*)malloc(sizeof(MIPS_LOCATION));
   new_location->type = INMEMORY;
   new_location->memory_frame_location = memory_location;
-  new_value->location = new_location;
+  new_binding->location = new_location;
 
   return memory_location;
-}
-
-void store_closure(TOKEN *name, MIPS_LOCATION *fp_location)
-{
-  //Lookup name in function list
-
-  int func_name = find_func_name(name);
-
-  MIPS_CLOSURE *closure = (MIPS_CLOSURE*)malloc(sizeof(MIPS_CLOSURE));
-  closure->name = func_name;
-  closure->enclosing_frame = fp_location;
-
-  MIPS_BINDING *binding = mips_env->bindings;
-
-  if (binding) {
-    while (binding->next)
-    {
-      binding = binding->next;
-    }
-  }
-
-  int memory_location = get_next_free_memory();
-
-  MIPS_BINDING *new_binding = (MIPS_BINDING*)malloc(sizeof(MIPS_BINDING));
-  new_binding->next = NULL;
-  LOCATION *tac_location = new_location(LOCTOKEN);
-  tac_location->token = name;
-  new_binding->tac_location = tac_location;
-
-  if (binding) {
-    binding->next = new_binding;
-  } else {
-    mips_env->bindings = new_binding;
-  }
-
-  MIPS_STORED_VALUE *new_value = (MIPS_STORED_VALUE*)malloc(sizeof(MIPS_STORED_VALUE));
-  new_value->type = FUNCTION;
-  new_value->closure = closure;
-  new_binding->value = new_value;
 }
 
 MIPS *create_activation_record(TAC *tac_code)
@@ -548,7 +488,6 @@ MIPS *translate_label(TAC *tac_code)
 MIPS *translate_function_def(TAC *tac_code)
 {
   TOKEN *token = (TOKEN*)((LOCATION*)tac_code->operand_one)->token;
-
   int function_name = find_func_name(token);
 
   MIPS *label_instruction = create_mips_instruction(FUNCTION_DEF, 0, function_name, 0);
@@ -571,24 +510,33 @@ MIPS *translate_jump(TAC *tac_code)
 
 MIPS *translate_jump_to_func(TAC *tac_code)
 {
-  MIPS_CLOSURE *closure = get_closure_from_env(tac_code->operand_one);
+  int scope_defined = ((LOCATION*)tac_code->operand_two)->value;
+  int closure = get_memory_location_from_env(tac_code->operand_one);
 
-  LOCATION *location = tac_code->operand_one;
-  TOKEN *token = location->token;
-
-  int name = find_func_name(token);
-
-  MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, name, 0);
-
-  if (closure) {
-    MIPS_LOCATION *location = closure->enclosing_frame;
-    MIPS *load_enclosing_scope = create_mips_instruction(LOADWORD_INS, 5, 30, location->memory_frame_location);
-    load_enclosing_scope->next = jump_instruction;
-
-    return load_enclosing_scope;
+  MIPS *closure_object = create_mips_instruction(LOADWORD_INS, 8, 30, closure);
+  MIPS *getScope = NULL;
+  if (scope_defined)
+  {
+    getScope = getEnclosingScope(scope_defined);
+    add_MIPS_to_list(getScope, closure_object);
+    closure_object->operand_one = 15;
   }
 
-  return jump_instruction;
+
+  //Load closure address into $t0
+  MIPS *closure_address = create_mips_instruction(LOADWORD_INS, 9, 8, 0);
+  closure_object->next = closure_address;
+  //Load enclosing scope into $t1
+  MIPS *enclosing_address = create_mips_instruction(LOADWORD_INS, 5, 8, 4);
+  closure_address->next = enclosing_address;
+  //Store Return address
+
+  //Jump to $t0
+  MIPS *jump = create_mips_instruction(JUMP_LINK_REG, 9, 0, 0);
+  enclosing_address->next = jump;
+
+  if (scope_defined) return getScope;
+  return closure_object;
 }
 
 MIPS *allocate_space_for_params(TAC *tac_code)
@@ -628,91 +576,35 @@ MIPS *put_param_in_memory(TAC *tac_code)
 
 MIPS *create_closure(TAC *tac_code)
 {
-  TOKEN *token = (TOKEN*)((LOCATION*)tac_code->operand_one)->token;
-  int function_name = find_func_name(token);
-
-  MIPS_LOCATION *enclosing_frame = (MIPS_LOCATION*)malloc(sizeof(MIPS_LOCATION));
-  enclosing_frame->type = INMEMORY;
-  enclosing_frame->memory_frame_location = get_next_free_memory();
-
-  store_closure(token, enclosing_frame);
-
-  //Mips Save Value Of $fp
-  MIPS *save_fp = create_mips_instruction(STOREWORD, 30, enclosing_frame->memory_frame_location, 30);
-
-  return save_fp;
-}
-
-MIPS *create_global_scope(TAC *tac_code)
-{
-
-  MIPS *main_function = create_mips_instruction(FUNCTION_DEF, 0, MAIN_FUNC, 0);
-
-  //Allocate Space
+  TOKEN *function = (TOKEN*)((LOCATION*)tac_code->operand_one)->token;
+  //Allocate 8 bytes
   MIPS *bytes = create_mips_instruction(LOADIMEDIATE_INS, 4, 3, 0); //COUNT NUMBER OF FUNCTIONS TODO
-  bytes->operand_one = 24;
-  main_function->next = bytes;
+  bytes->operand_one = 8;
 
   MIPS *allocate = create_mips_instruction(LOADIMEDIATE_INS, 2, 9, 0);
   bytes->next = allocate;
 
   MIPS *syscall = create_mips_instruction(SYSCALL, 0, 0, 0);
   allocate->next = syscall;
+  //Put PC in 0($v0)
+  MIPS *load_address = create_mips_instruction(LOADADDRESS, 9, find_func_name(function), 0);
+  syscall->next = load_address;
+  MIPS *store_address = create_mips_instruction(STOREWORD, 2, 0, 9);
+  load_address->next = store_address;
 
-  MIPS *move_frame_pointer = create_mips_instruction(MOVE, 0, 30, 2);
-  syscall->next = move_frame_pointer;
+  //Put FP in 4($v0)
+  MIPS *store_fp = create_mips_instruction(STOREWORD, 2, 4, 30);
+  store_address->next = store_fp;
+  //Store pointer to object in current frame pointer
+  int location = store_value(tac_code->operand_one);
+  MIPS *store_pointer = create_mips_instruction(STOREWORD, 30, location, 2);
+  store_fp->next = store_pointer;
 
-  //Store the $ra in the 2nd place in the frame
-  MIPS *save_return = create_mips_instruction(STOREWORD, 30, 4, 31);
-  move_frame_pointer->next = save_return;
-
-  //Call the users main function
-  //Find in enviroment
-  FUNCTION_NAME *pointer = function_lookup_list;
-
-  int main_name;
-  while (pointer)
-  {
-    TOKEN *token = (TOKEN*)pointer->token;
-
-    if (strcmp(token->lexeme, "main") == 0)
-    {
-      main_name = pointer->name;
-    }
-    pointer = pointer->next;
-  }
-
-  MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, main_name, 0);
-
-  save_return->next = jump_instruction;
-
-  MIPS *load_return_address = create_mips_instruction(LOADWORD_INS, 8, 30, 4);
-  jump_instruction->next = load_return_address;
-  //jump to the value
-  MIPS *jump_to_return = create_mips_instruction(JUMP_REG, 8, 0, 0);
-  load_return_address->next = jump_to_return;
-
-  return main_function;
-}
-
-MIPS *check_if_at_end(TAC *tac_code)
-{
-  //At end of func so return to previous enviroment
-  //mips_env = mips_env->prev;
-
-  //if true we are end of user code
-  if (!tac_code->next)
-  {
-    //create main function and setup global scope
-    return create_global_scope(tac_code);
-  }
-
-  return NULL;
+  return bytes;
 }
 
 MIPS *tac_to_mips(TAC *tac_code)
 {
-  printf("%d\n", tac_code->operation);
   switch (tac_code->operation) {
     case 'S':
       return translate_store(tac_code);
@@ -753,7 +645,7 @@ MIPS *tac_to_mips(TAC *tac_code)
     case CREATE_CLOSURE:
       return create_closure(tac_code);
     case FUNC_END:
-        return check_if_at_end(tac_code);
+        return NULL;
   }
 }
 
@@ -777,6 +669,75 @@ MIPS *translate_tac_instruction(TAC *tac)
   return tac_to_mips(tac);
 }
 
+MIPS *create_mips_code(TAC *tac_code)
+{
+
+  MIPS *main_function = create_mips_instruction(FUNCTION_DEF, 0, MAIN_FUNC, 0);
+
+  //Allocate Space
+  MIPS *bytes = create_mips_instruction(LOADIMEDIATE_INS, 4, 3, 0); //COUNT NUMBER OF FUNCTIONS TODO
+  bytes->operand_one = 24;
+  main_function->next = bytes;
+
+  MIPS *allocate = create_mips_instruction(LOADIMEDIATE_INS, 2, 9, 0);
+  bytes->next = allocate;
+
+  MIPS *syscall = create_mips_instruction(SYSCALL, 0, 0, 0);
+  allocate->next = syscall;
+
+  MIPS *move_frame_pointer = create_mips_instruction(MOVE, 0, 30, 2);
+  syscall->next = move_frame_pointer;
+
+  //Store the $ra in the 2nd place in the frame
+  MIPS *save_return = create_mips_instruction(STOREWORD, 30, 4, 31);
+  move_frame_pointer->next = save_return;
+
+  MIPS *closures = tac_to_mips(tac_code);
+  tac_code = tac_code->next;
+
+  while (tac_code->operation == CREATE_CLOSURE)
+  {
+    add_MIPS_to_list(closures, tac_to_mips(tac_code));
+    tac_code = tac_code->next;
+  }
+
+  save_return->next = closures;
+
+  //Call the users main function
+  //Find in enviroment
+  FUNCTION_NAME *pointer = function_lookup_list;
+
+  int main_name;
+  while (pointer)
+  {
+    TOKEN *token = (TOKEN*)pointer->token;
+
+    if (strcmp(token->lexeme, "main") == 0)
+    {
+      main_name = pointer->name;
+    }
+    pointer = pointer->next;
+  }
+
+  //Store global scope in $a1
+  MIPS *store_global_fp = create_mips_instruction(MOVE, 0, 5, 30);
+  add_MIPS_to_list(closures, store_global_fp);
+
+  MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, main_name, 0);
+  store_global_fp->next = jump_instruction;
+
+  MIPS *load_return_address = create_mips_instruction(LOADWORD_INS, 8, 30, 4);
+  jump_instruction->next = load_return_address;
+  //jump to the value
+  MIPS *jump_to_return = create_mips_instruction(JUMP_REG, 8, 0, 0);
+  load_return_address->next = jump_to_return;
+
+  MIPS *user_code = translate_tac_instruction(tac_code);
+
+  add_MIPS_to_list(main_function, user_code);
+  return main_function;
+}
+
 MIPS *translate_tac(TAC *tac)
 {
   if (mips_env == NULL)
@@ -786,5 +747,5 @@ MIPS *translate_tac(TAC *tac)
     mips_env->bindings = NULL;
   }
 
-  return translate_tac_instruction(tac);
+  return create_mips_code(tac);
 }

@@ -15,6 +15,8 @@
 #define MOVE 15
 #define JUMP_REG 16
 #define ADD_IM 18
+#define LOADADDRESS 19
+#define JUMP_LINK_REG 20
 
 #define MIPS_RETURN_REG 2;
 

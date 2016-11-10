@@ -29,15 +29,21 @@ int current_label = 0;
 
 TAC_FRAME *tac_env = NULL;
 
-TAC *current_tac_tail;
-TAC *current_tac_head;
+FUNCTION_ITEM *current_function;
 TAC *global_closure_definitions;
 
-TAC *get_tail(TAC* tac)
+LOCATION *get_last_instruction_destination(TAC* tac)
 {
-  if (tac->next) return get_tail(tac->next);
+  if (tac->next) return get_last_instruction_destination(tac->next);
 
-  return tac;
+  return tac->destination;
+}
+
+int get_last_instruction_operation(TAC* tac)
+{
+  if (tac->next) return get_last_instruction_operation(tac->next);
+
+  return tac->operation;
 }
 
 void addToCurrentScope(TOKEN *new_token)
@@ -92,14 +98,16 @@ TAC *new_tac_add_to_tail()
 {
   TAC *tac_struct = new_tac();
 
-  if (!current_tac_tail) {
-    current_tac_tail = tac_struct;
-    current_tac_head = tac_struct;
-  } else {
-    current_tac_tail->next = tac_struct;
-    current_tac_tail = tac_struct;
-
+  if (!current_function->tac)
+  {
+    current_function->tac = tac_struct;
+    return tac_struct;
   }
+
+  TAC *pointer = current_function->tac;
+  while (pointer->next) pointer = pointer->next;
+
+  pointer->next = tac_struct;
 
   return tac_struct;
 }
@@ -122,9 +130,9 @@ LOCATION *next_reg()
 void compile_math(NODE *tree)
 {
   compile_tree(tree->left);
-  LOCATION *operand_one_location = current_tac_tail->destination;
+  LOCATION *operand_one_location = get_last_instruction_destination(current_function->tac);
   compile_tree(tree->right);
-  LOCATION *operand_two_location = current_tac_tail->destination;
+  LOCATION *operand_two_location = get_last_instruction_destination(current_function->tac);
 
   TAC *operation = new_tac_add_to_tail();
   operation->destination = next_reg();
@@ -137,7 +145,7 @@ void compile_math(NODE *tree)
 void compile_return(NODE *tree)
 {
   compile_tree(tree->left);
-  LOCATION *return_location = current_tac_tail->destination;
+  LOCATION *return_location = get_last_instruction_destination(current_function->tac);
 
   TAC *return_tac = new_tac_add_to_tail();
   return_tac->operation = RETURN;
@@ -172,7 +180,7 @@ void compile_declaration(NODE *tree)
   addToCurrentScope(destination->token);
 
   compile_tree(tree->right->right);
-  LOCATION *operation_destination = current_tac_tail->destination;
+  LOCATION *operation_destination = get_last_instruction_destination(current_function->tac);
 
   TAC *taccode = new_tac_add_to_tail();
   taccode->destination = destination;
@@ -200,7 +208,7 @@ void compile_assignment(NODE *tree)
     destination->token = (TOKEN*)tree->left->left;
 
     compile_tree(tree->right);
-    LOCATION *operation_destination = current_tac_tail->destination;
+    LOCATION *operation_destination = get_last_instruction_destination(current_function->tac);
     TAC *taccode = new_tac_add_to_tail();
     taccode->destination = destination;
     taccode->operation = 'S';
@@ -211,7 +219,7 @@ void compile_assignment(NODE *tree)
 void compile_conditional(NODE *tree)
 {
   compile_tree(tree->left);
-  LOCATION *condition_destination = current_tac_tail->destination;
+  LOCATION *condition_destination = get_last_instruction_destination(current_function->tac);
 
   TAC *if_statement = new_tac_add_to_tail();
   if_statement->operation = IF_NOT;
@@ -274,7 +282,7 @@ void compile_while(NODE *tree)
 
 
   compile_tree(tree->left);
-  LOCATION *condition_destination = current_tac_tail->destination;
+  LOCATION *condition_destination = get_last_instruction_destination(current_function->tac);
 
   TAC *if_statement = new_tac_add_to_tail();
   if_statement->operation = IF;
@@ -346,33 +354,13 @@ void create_load_arg(NODE *tree)
   }
 }
 
-LOCATION *find_last_function_def()
-{
-  TAC *pointer = current_tac_head;
-  LOCATION *last_func;
-  while (pointer)
-  {
-    if (pointer->operation == FUNCTION_DEF) last_func = (LOCATION*)pointer->operand_one;
-    pointer = pointer->next;
-  }
-  return last_func;
-}
-
 void compile_funcion_def(NODE *tree)
 {
   FUNCTION_ITEM *new_function = (FUNCTION_ITEM*)malloc(sizeof(FUNCTION_ITEM));
 
-  if (!function_list) {
-    function_list = new_function;
-  } else {
-    FUNCTION_ITEM *pointer = function_list;
-    while(pointer->next) pointer = pointer->next;
-    pointer->next = new_function;
-  }
-
-  TAC_FRAME *new_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
-  new_frame->prev = tac_env;
-  tac_env = new_frame;
+  FUNCTION_ITEM *pointer = function_list;
+  while(pointer->next) pointer = pointer->next;
+  pointer->next = new_function;
 
   TAC *define_closure = new_tac_add_to_tail();
   define_closure->operation = CREATE_CLOSURE;
@@ -380,11 +368,14 @@ void compile_funcion_def(NODE *tree)
   func_name->token = (TOKEN*)tree->left->right->left->left;
   define_closure->operand_one = func_name;
 
-  TAC *last_head = current_tac_head;
-  TAC *last_tail = current_tac_tail;
+  addToCurrentScope(func_name->token);
 
-  current_tac_tail = 0;
-  current_tac_head = 0;
+  TAC_FRAME *new_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
+  new_frame->prev = tac_env;
+  tac_env = new_frame;
+
+  FUNCTION_ITEM *prev_function = current_function;
+  current_function = new_function;
 
   TAC *function = new_tac_add_to_tail();
   function->operation = FUNCTION_DEF;
@@ -398,14 +389,12 @@ void compile_funcion_def(NODE *tree)
   //for each arguments
   create_load_arg(tree->left->right->right);
 
-  TAC *body_start = current_tac_tail;
   compile_tree(tree->right);
-  //print_tac(body_start->next);
 
-  int locals = count_locals(body_start->next);
+  int locals = count_locals(frame->next);
   LOCATION *loc_local = new_location(INT);
   loc_local->value = locals;
-  int tempories = count_tempories(body_start->next);
+  int tempories = count_tempories(frame->next);
   LOCATION *loc_temp = new_location(INT);
   loc_temp->value = tempories;
   int arguments = count_arguments(tree->left->right->right);
@@ -419,8 +408,8 @@ void compile_funcion_def(NODE *tree)
   frame->operand_two = loc_temp;
 
   //If the last command in the body isnt a RETURN add one
-  TAC *last_tac = get_tail(body_start->next);
-  if (last_tac->operation != RETURN) {
+  int last_tac_op = get_last_instruction_operation(current_function->tac);
+  if (last_tac_op != RETURN) {
     TAC *return_tac = new_tac_add_to_tail();
     return_tac->operation = RETURN;
   };
@@ -429,11 +418,8 @@ void compile_funcion_def(NODE *tree)
   TAC *end_tag = new_tac_add_to_tail();
   end_tag->operation = FUNC_END;
 
-  new_function->tac = current_tac_head;
-
-  current_tac_head = last_head;
-  current_tac_tail = last_tail;
-
+  current_function = prev_function;
+  tac_env = tac_env->prev;
 }
 
 int count_parameters(NODE *tree)
@@ -458,7 +444,7 @@ void save_parameters(NODE *tree)
   if (tree->type != ',')
   {
     compile_tree(tree);
-    LOCATION *compile_destination = current_tac_tail->destination;
+    LOCATION *compile_destination = get_last_instruction_destination(current_function->tac);
 
     TAC *save_param = new_tac_add_to_tail();
     save_param->operation = SAVE_PARAM;
@@ -495,13 +481,18 @@ void compile_apply(NODE *tree)
     jump_to_func->operation = JUMPTOFUNC;
     LOCATION *func_loc = new_location(LOCTOKEN);
     func_loc->token = (TOKEN*)tree->left->left;
+
+    LOCATION *scope = new_location(LOCVALUE);
+    scope->value = whereIsTokenDefined(func_loc->token);
+    jump_to_func->operand_two = scope;
+
     jump_to_func->operand_one = func_loc;
     LOCATION *return_reg = new_location(LOCREG);
     return_reg->reg = RETURN_REG;
     jump_to_func->destination = return_reg;
   } else {
     compile_tree(tree->left);
-    LOCATION *function_location = current_tac_tail->destination;
+    LOCATION *function_location = get_last_instruction_destination(current_function->tac);
 
     store_paraments(tree->right);
 
@@ -573,18 +564,18 @@ void compile_tree(NODE *tree)
 
 TAC *getTac()
 {
-  TAC *head = NULL;
+  TAC *tail = NULL;
   FUNCTION_ITEM *function_pointer = function_list;
 
   while (function_pointer)
   {
-    if (!head){
-        head = function_pointer->tac;
+    if (!tail){
+        tail = function_pointer->tac;
     } else {
-      head->next = function_pointer->tac;
+      tail->next = function_pointer->tac;
     }
 
-    while (head->next) head = head->next;
+    while (tail->next) tail = tail->next;
 
     function_pointer = function_pointer->next;
   }
@@ -594,6 +585,13 @@ TAC *getTac()
 
 TAC *compile(NODE *tree)
 {
+  FUNCTION_ITEM *global_scope = (FUNCTION_ITEM*)malloc(sizeof(FUNCTION_ITEM));
+  function_list = global_scope;
+  current_function = global_scope;
+
+  TAC_FRAME *global_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
+  tac_env = global_frame;
+
   compile_tree(tree);
 
   return getTac();

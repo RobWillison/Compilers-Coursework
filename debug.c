@@ -184,7 +184,8 @@ void print_tac(TAC *tac_code)
   } else if (tac_code->operation == JUMPTOFUNC){
 
     LOCATION *operand_one = tac_code->operand_one;
-    printf("CALL %s\n", get_location(operand_one));
+    int scope = ((LOCATION*)tac_code->operand_two)->value;
+    printf("CALL %s FROM SCOPE %d\n", get_location(operand_one), scope);
 
   } else if (tac_code->operation == FUNCTION_DEF){
     LOCATION *location = tac_code->operand_one;
@@ -280,6 +281,12 @@ void print_mips(MIPS *mips, FILE *file)
       break;
     case SYSCALL:
       fprintf(file, "syscall\n");
+      break;
+    case LOADADDRESS:
+      fprintf(file, "la %s function%d\n", registers[mips->destination], mips->operand_one);
+      break;
+    case JUMP_LINK_REG:
+      fprintf(file, "jal %s\n", registers[mips->destination]);
       break;
   }
 
