@@ -10,12 +10,19 @@
 #include "Memory.h"
 #include "debug.h"
 
+TOKEN *inner_func = NULL;
+
 extern void compile_tree(NODE *tree);
 
 typedef struct TAC_FRAME {
-  struct TOKEN *token;
+  struct TOKEN_INSTANCE *inst;
   struct TAC_FRAME *prev;
 } TAC_FRAME;
+
+typedef struct TOKEN_INSTANCE {
+  struct TOKEN *token;
+  struct TOKEN_INSTANCE *next;
+} TOKEN_INSTANCE;
 
 typedef struct FUNCTION_ITEM {
   struct TAC *tac;
@@ -48,16 +55,19 @@ int get_last_instruction_operation(TAC* tac)
 
 void addToCurrentScope(TOKEN *new_token)
 {
-  TOKEN *token = tac_env->token;
-  if (!token)
+  TOKEN_INSTANCE *new_instance = (TOKEN_INSTANCE*)malloc(sizeof(TOKEN_INSTANCE));
+  new_instance->token = new_token;
+
+  TOKEN_INSTANCE *instance = tac_env->inst;
+  if (!instance)
   {
-    tac_env->token = new_token;
+    tac_env->inst = new_instance;
     return;
   }
 
-  while (token->next) token = token->next;
+  while (instance->next) instance = instance->next;
 
-  token->next = new_token;
+  instance->next = new_instance;
 }
 //returns the number of scopes up the token is defined
 int whereIsTokenDefined(TOKEN *look_token)
@@ -65,14 +75,15 @@ int whereIsTokenDefined(TOKEN *look_token)
   int scopes = 0;
   TAC_FRAME *env = tac_env;
   if (look_token->type == CONSTANT) return 0;
+
   while(env)
   {
-    TOKEN *token = env->token;
+    TOKEN_INSTANCE *instance = env->inst;
 
-    while (token)
+    while (instance)
     {
-      if (token == look_token) return scopes;
-      token = token->next;
+      if (instance->token == look_token) return scopes;
+      instance = instance->next;
     }
     scopes++;
     env = env->prev;
@@ -373,6 +384,8 @@ void compile_funcion_def(NODE *tree)
   define_closure->operand_one = func_name;
 
   addToCurrentScope(func_name->token);
+  if (strcmp("inner_fact", ((TOKEN*)func_name->token)->lexeme) == 0) inner_func = ((TOKEN*)func_name->token);
+
 
   TAC_FRAME *new_frame = (TAC_FRAME*)malloc(sizeof(TAC_FRAME));
   new_frame->prev = tac_env;

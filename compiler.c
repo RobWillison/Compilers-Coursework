@@ -587,6 +587,7 @@ MIPS *put_param_in_memory(TAC *tac_code)
 MIPS *create_closure(TAC *tac_code)
 {
   TOKEN *function = (TOKEN*)((LOCATION*)tac_code->operand_one)->token;
+
   //Allocate 8 bytes
   MIPS *bytes = create_mips_instruction(LOADIMEDIATE_INS, 4, 3, 0); //COUNT NUMBER OF FUNCTIONS TODO
   bytes->operand_one = 8;
