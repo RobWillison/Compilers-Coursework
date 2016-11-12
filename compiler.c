@@ -277,7 +277,7 @@ MIPS *translate_store(TAC *tac_code)
         load_instruction = getEnclosing;
       }
     }
-  } else {
+  } else if (operand->type == LOCREG){
     //If its in a register location
     LOCATION *location = tac_code->operand_one;
     if (location->reg == RETURN_REG)
@@ -286,6 +286,9 @@ MIPS *translate_store(TAC *tac_code)
     } else {
       load_instruction = create_mips_instruction(LOADWORD_INS, 8, 30, get_memory_location_from_env(tac_code->operand_one));
     }
+  } else {
+    LOCATION *location = tac_code->operand_one;
+    load_instruction = create_mips_instruction(LOADIMEDIATE_INS, 8, location->value, 0);
   }
 
   MIPS *store_instruction;

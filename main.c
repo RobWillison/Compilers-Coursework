@@ -297,7 +297,9 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
         TOKEN *token = (TOKEN*)tree->right->left->left;
 
         UNION *result = new_union(INT);
-        result->value = ((TOKEN*)tree->right->right->left)->value;
+        
+        if (tree->right->right) result->value = ((TOKEN*)tree->right->right->left)->value;
+
 
         store_variable(enviroment, token, result);
       } else {

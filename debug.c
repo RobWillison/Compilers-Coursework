@@ -17,7 +17,7 @@ char *get_location(LOCATION *loc)
     char *string = malloc(sizeof(char) * 5);
     sprintf(string, "r%d", loc->reg);
     return string;
-  } else {
+  } else if (loc->type == LOCTOKEN){
     TOKEN *t = (TOKEN*)loc->token;
     if (t->type == CONSTANT) {
       char *result = malloc(sizeof(char) * 3);
@@ -26,6 +26,10 @@ char *get_location(LOCATION *loc)
     } else {
       return t->lexeme;
     }
+  } else {
+    char *result = malloc(sizeof(char) * 3);
+    sprintf(result, "%d", loc->value);
+    return result;
   }
 }
 

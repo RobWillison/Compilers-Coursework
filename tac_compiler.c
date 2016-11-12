@@ -189,12 +189,22 @@ void compile_leaf(NODE *tree)
 void compile_declaration(NODE *tree)
 {
   LOCATION *destination = new_location(LOCTOKEN);
+
   destination->token = (TOKEN*)tree->right->left->left;
+  if (tree->right->type == LEAF) destination->token = (TOKEN*)tree->right->left;
+
 
   addToCurrentScope(destination->token);
 
-  compile_tree(tree->right->right);
-  LOCATION *operation_destination = get_last_instruction_destination(current_function->tac);
+  LOCATION *operation_destination = new_location(LOCVALUE);
+  operation_destination->value = 0;
+
+  if(tree->right->right)
+  {
+    compile_tree(tree->right->right);
+    operation_destination = get_last_instruction_destination(current_function->tac);
+  }
+
 
   TAC *taccode = new_tac_add_to_tail();
   taccode->destination = destination;

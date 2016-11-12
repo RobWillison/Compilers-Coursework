@@ -1,7 +1,8 @@
 int main()
 {
-  int o = 9;
-  int y() {return o; }
+  int o;
 
-  return y();
+  o = 9;
+
+  return o;
 }
