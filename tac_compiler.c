@@ -455,34 +455,47 @@ int count_parameters(NODE *tree)
   return count;
 }
 
-void save_parameters(NODE *tree)
+LOCATION **save_parameters(NODE *tree, LOCATION **parameter_locations)
 {
-  if (!tree) return;
+  if (!tree) return parameter_locations;
 
   if (tree->type != ',')
   {
     compile_tree(tree);
     LOCATION *compile_destination = get_last_instruction_destination(current_function->tac);
 
-    TAC *save_param = new_tac_add_to_tail();
-    save_param->operation = SAVE_PARAM;
-    save_param->operand_one = compile_destination;
+    int i = 0;
+    while (parameter_locations[i] != NULL) i++;
+    parameter_locations[i] = compile_destination;
 
   } else {
-    save_parameters(tree->left);
-    save_parameters(tree->right);
+    save_parameters(tree->left, parameter_locations);
+    save_parameters(tree->right, parameter_locations);
   }
+
+  return parameter_locations;
 }
 
 void store_paraments(NODE *tree)
 {
+  int parameter_count = count_parameters(tree);
+  LOCATION **parameter_location = (LOCATION**)calloc(parameter_count, sizeof(LOCATION));
+
+  parameter_location = save_parameters(tree, parameter_location);
+
   TAC *parameter_setup = new_tac_add_to_tail();
   parameter_setup->operation = PARAMETER_ALLOCATE;
   LOCATION *param_count = new_location(LOCVALUE);
-  param_count->value = count_parameters(tree);
+  param_count->value = parameter_count;
   parameter_setup->operand_one = param_count;
 
-  save_parameters(tree);
+  int i;
+  for (int i = 0; i < parameter_count; i++)
+  {
+    TAC *save_param = new_tac_add_to_tail();
+    save_param->operation = SAVE_PARAM;
+    save_param->operand_one = parameter_location[i];
+  }
 }
 
 void compile_apply(NODE *tree)
