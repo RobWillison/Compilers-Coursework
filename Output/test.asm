@@ -3,7 +3,7 @@
 .text
 
 main:
-li $a0 24
+li $a0 16
 li $v0 9
 syscall
 move $fp $v0

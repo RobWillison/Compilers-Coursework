@@ -689,8 +689,17 @@ MIPS *create_mips_code(TAC *tac_code)
   MIPS *main_function = create_mips_instruction(FUNCTION_DEF, 0, MAIN_FUNC, 0);
 
   //Allocate Space
+  //Count global closures
+  int numOfClosures = 0;
+  TAC *tacPointer = tac_code;
+  while (tacPointer->operation == CREATE_CLOSURE)
+  {
+    numOfClosures++;
+    tacPointer = tacPointer->next;
+  }
+
   MIPS *bytes = create_mips_instruction(LOADIMEDIATE_INS, 4, 3, 0); //COUNT NUMBER OF FUNCTIONS TODO
-  bytes->operand_one = 24;
+  bytes->operand_one = 12 + numOfClosures * 4;
   main_function->next = bytes;
 
   MIPS *allocate = create_mips_instruction(LOADIMEDIATE_INS, 2, 9, 0);

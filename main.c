@@ -297,7 +297,7 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
         TOKEN *token = (TOKEN*)tree->right->left->left;
 
         UNION *result = new_union(INT);
-        
+
         if (tree->right->right) result->value = ((TOKEN*)tree->right->right->left)->value;
 
 
@@ -420,12 +420,11 @@ int main(int argc, char** argv)
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
       printf("TRANSLATED TO MIPS\n");
-      //This will need to change when functions are implemented
+
       FILE *file = fopen("Output/test.asm", "w");
       fprintf(file, ".globl main\n\n.text\n\n");
       print_mips(ins, file);
       print_mips(ins, 0);
       fprintf(file, "\n.data\n");
-
     }
 }
