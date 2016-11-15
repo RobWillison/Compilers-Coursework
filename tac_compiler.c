@@ -7,7 +7,6 @@
 #include "TACstruct.h"
 #include "MIPS.h"
 #include "instructionSet.h"
-#include "Memory.h"
 #include "debug.h"
 
 TOKEN *inner_func = NULL;
@@ -500,7 +499,7 @@ void store_paraments(NODE *tree)
   parameter_setup->operand_one = param_count;
 
   int i;
-  for (int i = 0; i < parameter_count; i++)
+  for (i = 0; i < parameter_count; i++)
   {
     TAC *save_param = new_tac_add_to_tail();
     save_param->operation = SAVE_PARAM;

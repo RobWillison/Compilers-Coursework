@@ -7,6 +7,7 @@
 #include "MIPS.h"
 #include "definitions.h"
 #include "tac_compiler.h"
+#include "optimiser.h"
 #include "debug.h"
 
 #define ANSWERVALUE 254
@@ -420,7 +421,8 @@ int main(int argc, char** argv)
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
       printf("TRANSLATED TO MIPS\n");
-
+      printf("OPTIMISING\n");
+      ins = optimise(ins);
       FILE *file = fopen("Output/test.asm", "w");
       fprintf(file, ".globl main\n\n.text\n\n");
       print_mips(ins, file);

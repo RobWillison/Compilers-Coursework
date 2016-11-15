@@ -9,6 +9,32 @@ extern int get_memory_location_from_env(LOCATION *target);
 
 const char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 
+MIPS *programHead = NULL;
+
+MIPS *getProgramHead()
+{
+  return programHead;
+}
+
+void add_MIPS_to_list(MIPS *front, MIPS *tail)
+{
+  while (front->next != 0)
+  {
+    front = front->next;
+  }
+  front->next = tail;
+}
+
+void addToHeadOfProgram(MIPS *instructions)
+{
+  if (programHead == NULL)
+  {
+    programHead = instructions;
+    return;
+  }
+  add_MIPS_to_list(programHead, instructions);
+}
+
 char *get_instruction(int instruction)
 {
   switch (instruction) {
@@ -54,6 +80,8 @@ char *get_instruction(int instruction)
 MIPS *new_mips()
 {
   MIPS *ins = (MIPS*)malloc(sizeof(MIPS));
+  ins->next = 0;
+  addToHeadOfProgram(ins);
   return ins;
 }
 
