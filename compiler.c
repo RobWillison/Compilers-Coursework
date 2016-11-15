@@ -50,7 +50,7 @@ MIPS *getEnclosingScope(int scopes)
   int i;
   for (i = 0; i < scopes; i++)
   {
-    scope->next = create_mips_instruction(LOADWORD_INS, 15, 15, 8);
+    scope->next = create_mips_instruction(LOADWORD_INS, initial->operand_one, initial->operand_one, 8);
     scope = scope->next;
   }
 
@@ -229,6 +229,8 @@ MIPS *translate_store(TAC *tac_code)
   LOCATION *operand = tac_code->operand_one;
   LOCATION *destination = tac_code->destination;
 
+  MIPS_LOCATION *envLocation = get_location_from_env(operand);
+
   MIPS *load_instruction;
   if (operand->type == LOCTOKEN)
   {
@@ -252,7 +254,7 @@ MIPS *translate_store(TAC *tac_code)
         framePointer = 15;
       }
 
-      load_instruction = create_mips_instruction(LOADWORD_INS, 8, framePointer, get_memory_location_from_env(operand));
+      load_instruction = create_mips_instruction(LOADWORD_INS, 8, framePointer, envLocation->memory_frame_location);
       if (getEnclosing)
       {
         load_instruction = getEnclosing;
@@ -260,12 +262,12 @@ MIPS *translate_store(TAC *tac_code)
     }
   } else if (operand->type == LOCREG){
     //If its in a register location
-    LOCATION *location = tac_code->operand_one;
+    LOCATION *location = operand;
     if (location->reg == RETURN_REG)
     {
       load_instruction = create_mips_instruction(MOVE, 0, 8, 2);
     } else {
-      load_instruction = create_mips_instruction(LOADWORD_INS, 8, 30, get_memory_location_from_env(tac_code->operand_one));
+      load_instruction = create_mips_instruction(LOADWORD_INS, 8, 30, envLocation->memory_frame_location);
     }
   } else {
     LOCATION *location = tac_code->operand_one;
