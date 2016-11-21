@@ -8,7 +8,9 @@
 #include "MIPS.h"
 #include "definitions.h"
 #include "debug.h"
+#include "tacBlock.h"
 #include "compiler.h"
+
 
 extern MIPS *translate_tac_instruction();
 extern MIPS *tac_to_mips();
@@ -618,7 +620,7 @@ MIPS *translate_tac_instruction(TAC *tac)
   return tac_to_mips(tac);
 }
 
-MIPS *create_mips_code(TAC *tac_code)
+MIPS *create_mips_code(TAC_BLOCK *tac_block)
 {
 
   MIPS *main_function = create_mips_instruction(FUNCTION_DEF, 0, MAIN_FUNC, 0);
@@ -626,8 +628,9 @@ MIPS *create_mips_code(TAC *tac_code)
   //Allocate Space
   //Count global closures
   int numOfClosures = 0;
-  TAC *tacPointer = tac_code;
-  while (tacPointer->operation == CREATE_CLOSURE)
+  TAC *tacPointer = tac_block->tac;
+
+  while (tacPointer)
   {
     numOfClosures++;
     tacPointer = tacPointer->next;
@@ -645,14 +648,17 @@ MIPS *create_mips_code(TAC *tac_code)
   //Store the $ra in the 2nd place in the frame
   MIPS *save_return = create_mips_instruction(STOREWORD, 30, 4, 31);
 
-  MIPS *closures = tac_to_mips(tac_code);
-  tac_code = tac_code->next;
+  TAC *globalTac = tac_block->tac;
+  MIPS *closures = tac_to_mips(globalTac);
+  globalTac = globalTac->next;
 
-  while (tac_code->operation == CREATE_CLOSURE)
+  while (globalTac)
   {
-    tac_to_mips(tac_code);
-    tac_code = tac_code->next;
+    tac_to_mips(globalTac);
+    globalTac = globalTac->next;
   }
+
+  tac_block = tac_block->next;
 
   //Call the users main function
   //Find in enviroment
@@ -680,12 +686,19 @@ MIPS *create_mips_code(TAC *tac_code)
   //jump to the value
   MIPS *jump_to_return = create_mips_instruction(JUMP_REG, 8, 0, 0);
 
-  MIPS *user_code = translate_tac_instruction(tac_code);
+  TAC_BLOCK *blockPointer = tac_block;
+  while (blockPointer)
+  {
+    translate_tac_instruction(blockPointer->tac);
+
+    blockPointer = blockPointer->next;
+  }
+
 
   return getProgramHead();
 }
 
-MIPS *translate_tac(TAC *tac)
+MIPS *translate_tac(TAC_BLOCK *tac)
 {
   if (mips_env == NULL)
   {

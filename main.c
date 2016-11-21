@@ -8,6 +8,7 @@
 #include "definitions.h"
 #include "tac_compiler.h"
 #include "optimiser.h"
+#include "tacBlock.h"
 #include "debug.h"
 
 #define ANSWERVALUE 254
@@ -415,9 +416,9 @@ int main(int argc, char** argv)
 
       return result->value;
     } else {
-      TAC *taccode = compile(tree);
+      TAC_BLOCK *taccode = compile(tree);
       printf("COMPILED TO TAC\n");
-      print_tac(taccode);
+      printTacBlock(taccode);
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
       printf("TRANSLATED TO MIPS\n");

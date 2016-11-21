@@ -1,6 +1,6 @@
 #define INMEMORY 1
 
-extern MIPS *translate_tac(TAC *tac);
+extern MIPS *translate_tac(TAC_BLOCK *tac);
 
 typedef struct MIPS_FRAME
 {

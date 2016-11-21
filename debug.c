@@ -7,6 +7,7 @@
 #include "TACstruct.h"
 #include "MIPS.h"
 #include "instructionSet.h"
+#include "tacBlock.h"
 
 
 char *get_location(LOCATION *loc)
@@ -154,7 +155,6 @@ void print_tree(NODE *tree)
 
 void print_tac(TAC *tac_code)
 {
-
   if (tac_code == 0) return;
 
   if (tac_code->operation == 'S') {
@@ -294,4 +294,14 @@ void print_mips(MIPS *mips, FILE *file)
   }
 
   if (mips->next) print_mips(mips->next, file);
+}
+
+void printTacBlock(TAC_BLOCK *block)
+{
+  TAC_BLOCK *pointer = block;
+  while(pointer)
+  {
+    print_tac(pointer->tac);
+    pointer = pointer->next;
+  }
 }

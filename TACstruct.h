@@ -28,4 +28,4 @@ typedef struct TAC
   struct TAC  *next;
 } TAC;
 
-extern TAC* new_tac_add_to_tail();
+extern TAC* newTac();
