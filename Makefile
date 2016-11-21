@@ -1,5 +1,5 @@
-OBJS = compiler.o tac_compiler.o tacBlock.o MIPS.o optimiser.o debug.o lex.yy.o C.tab.o symbol_table.o nodes.o main.o
-SRCS = compiler.c tac_compiler.c tacBlock.c MIPS.c optimiser.c debug.c lex.yy.c C.tab.c symbol_table.c nodes.c main.c
+OBJS = compiler.o tac_compiler.o tac_optimiser.o tacBlock.o MIPS.o optimiser.o debug.o lex.yy.o C.tab.o symbol_table.o nodes.o main.o
+SRCS = compiler.c tac_compiler.c tac_optimiser.c tacBlock.c MIPS.c optimiser.c debug.c lex.yy.c C.tab.c symbol_table.c nodes.c main.c
 CC = gcc
 
 all:	mycc

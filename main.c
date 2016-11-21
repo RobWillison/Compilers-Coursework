@@ -418,6 +418,7 @@ int main(int argc, char** argv)
     } else {
       TAC_BLOCK *taccode = compile(tree);
       printf("COMPILED TO TAC\n");
+      taccode = optimiseTac(taccode);
       printTacBlock(taccode);
       printf("TRANSLATE TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
