@@ -614,6 +614,7 @@ MIPS *translate_tac_instruction(TAC *tac)
 
 MIPS *create_mips_code(TAC_BLOCK *tac_block)
 {
+  newMIPSBlock();
 
   MIPS *main_function = create_mips_instruction(FUNCTION_DEF, 0, MAIN_FUNC, 0);
 
@@ -644,6 +645,7 @@ MIPS *create_mips_code(TAC_BLOCK *tac_block)
   MIPS *closures = tac_to_mips(globalTac);
   globalTac = globalTac->next;
 
+  newMIPSBlock();
   while (globalTac)
   {
     tac_to_mips(globalTac);
@@ -653,8 +655,6 @@ MIPS *create_mips_code(TAC_BLOCK *tac_block)
   tac_block = tac_block->next;
 
   //Call the users main function
-  //Find in enviroment
-
   int main_name = 0;
 
   //Store global scope in $a1
@@ -670,11 +670,11 @@ MIPS *create_mips_code(TAC_BLOCK *tac_block)
   TAC_BLOCK *blockPointer = tac_block;
   while (blockPointer)
   {
+    newMIPSBlock();
     translate_tac_instruction(blockPointer->tac);
 
     blockPointer = blockPointer->next;
   }
-
 
   return getProgramHead();
 }

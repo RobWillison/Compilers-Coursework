@@ -13,6 +13,12 @@ typedef struct MIPS
   struct MIPS *next;
 } MIPS;
 
+typedef struct MIPS_BLOCK
+{
+  struct MIPS *instructions;
+  struct MIPS_BLOCK *next;
+} MIPS_BLOCK;
+
 extern const char* registers[];
 
 extern MIPS* new_mips();
@@ -21,3 +27,4 @@ extern char *get_instruction(int instruction);
 extern MIPS *create_mips_instruction(int x, int y, int z, int a);
 extern MIPS *create_load_ins(LOCATION *destination, LOCATION *operand);
 extern MIPS *getProgramHead();
+extern void newMIPSBlock();

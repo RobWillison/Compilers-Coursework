@@ -9,12 +9,7 @@ extern int get_memory_location_from_env(LOCATION *target);
 
 const char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 
-MIPS *programHead = NULL;
-
-MIPS *getProgramHead()
-{
-  return programHead;
-}
+MIPS_BLOCK *programHeadBlock = NULL;
 
 void add_MIPS_to_list(MIPS *front, MIPS *tail)
 {
@@ -25,14 +20,50 @@ void add_MIPS_to_list(MIPS *front, MIPS *tail)
   front->next = tail;
 }
 
-void addToHeadOfProgram(MIPS *instructions)
+void newMIPSBlock()
 {
-  if (programHead == NULL)
+  MIPS_BLOCK *newBlock = (MIPS_BLOCK*)malloc(sizeof(MIPS_BLOCK));
+
+  if (!programHeadBlock)
   {
-    programHead = instructions;
+    programHeadBlock = newBlock;
     return;
   }
-  add_MIPS_to_list(programHead, instructions);
+
+  MIPS_BLOCK *tail = programHeadBlock;
+  while (tail->next) tail = tail->next;
+  tail->next = newBlock;
+}
+
+MIPS *getProgramHead()
+{
+  MIPS_BLOCK *headBlock = programHeadBlock;
+  MIPS *program = NULL;
+  while (headBlock)
+  {
+    if (!program)
+    {
+      program = headBlock->instructions;
+    } else {
+      add_MIPS_to_list(program, headBlock->instructions);
+    }
+    headBlock = headBlock->next;
+  }
+
+  return program;
+}
+
+void addToHeadOfProgram(MIPS *instructions)
+{
+  MIPS_BLOCK *lastBlock = programHeadBlock;
+  while (lastBlock->next) lastBlock = lastBlock->next;
+
+  if (lastBlock->instructions == NULL)
+  {
+    lastBlock->instructions = instructions;
+    return;
+  }
+  add_MIPS_to_list(lastBlock->instructions, instructions);
 }
 
 char *get_instruction(int instruction)
