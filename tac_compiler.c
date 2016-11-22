@@ -14,18 +14,24 @@ extern void compile_tree(NODE *tree);
 
 typedef struct TAC_FRAME {
   struct TOKEN_INSTANCE *inst;
+  struct FUNCTION_DEFINITION *definitions;
   struct TAC_FRAME *prev;
 } TAC_FRAME;
 
 typedef struct TOKEN_INSTANCE {
   struct TOKEN *token;
-  int value;
   struct TOKEN_INSTANCE *next;
 } TOKEN_INSTANCE;
 
+typedef struct FUNCTION_DEFINITION {
+  struct TOKEN *token;
+  int value;
+  struct FUNCTION_DEFINITION *next;
+} FUNCTION_DEFINITION;
+
 int current_reg = 0;
 int current_label = 0;
-int current_function = 0;
+int current_function = 1;
 
 TAC_FRAME *tac_env = NULL;
 
@@ -50,10 +56,29 @@ TOKEN_INSTANCE *addToCurrentScope(TOKEN *new_token)
 
 int generateFunctionName(TOKEN *token)
 {
-  TOKEN_INSTANCE *instance = addToCurrentScope(token);
-  instance->value = current_function++;
+  TOKEN_INSTANCE *new_instance = addToCurrentScope(token);
+  FUNCTION_DEFINITION *newDefinition = (FUNCTION_DEFINITION*)malloc(sizeof(FUNCTION_DEFINITION));
+  newDefinition->token = token;
 
-  return instance->value;
+  if (strcmp("main", token->lexeme) == 0)
+  {
+    newDefinition->value = 0;
+  } else {
+    newDefinition->value = current_function++;
+  }
+
+  FUNCTION_DEFINITION *definition = tac_env->definitions;
+
+  if (!definition)
+  {
+    tac_env->definitions = newDefinition;
+    return newDefinition->value;
+  }
+
+  while (definition->next) definition = definition->next;
+  definition->next = newDefinition;
+
+  return newDefinition->value;
 }
 
 int getFunctionName(TOKEN *look_token)
@@ -62,12 +87,15 @@ int getFunctionName(TOKEN *look_token)
 
   while(env)
   {
-    TOKEN_INSTANCE *instance = env->inst;
+    FUNCTION_DEFINITION *definition = env->definitions;
 
-    while (instance)
+    while (definition)
     {
-      if (instance->token == look_token) return instance->value;
-      instance = instance->next;
+      if (definition->token == look_token)
+      {
+        return definition->value;
+      }
+      definition = definition->next;
     }
 
     env = env->prev;
@@ -151,6 +179,17 @@ void compile_leaf(NODE *tree)
   TOKEN *t = (TOKEN *)tree->left;
   LOCATION *loc = new_location(LOCTOKEN);
   loc->token = t;
+
+  if (t->type == IDENTIFIER)
+  {
+    int functionName = getFunctionName(t);
+
+    if (functionName != -1)
+    {
+      loc = new_location(LOCCLOSURE);
+      loc->value = functionName;
+    }
+  }
 
   int definedScope = whereIsTokenDefined(t);
 
@@ -367,14 +406,14 @@ void create_load_arg(NODE *tree)
 void compile_funcion_def(NODE *tree)
 {
   TOKEN *functionToken = (TOKEN*)tree->left->right->left->left;
+  int functionName = generateFunctionName(functionToken);
 
   TAC *define_closure = newTac();
   define_closure->operation = CREATE_CLOSURE;
-  LOCATION *func_name = new_location(LOCTOKEN);
-  func_name->token = functionToken;
+  LOCATION *func_name = new_location(LOCCLOSURE);
+  func_name->value = functionName;
   define_closure->operand_one = func_name;
 
-  int functionName = generateFunctionName(functionToken);
   addFunctionBlock(functionName);
 
   addToCurrentScope(func_name->token);
@@ -386,8 +425,8 @@ void compile_funcion_def(NODE *tree)
 
   TAC *function = newTac();
   function->operation = FUNCTION_DEF;
-  LOCATION *location = new_location(LOCTOKEN);
-  location->token = (TOKEN*)tree->left->right->left->left;
+  LOCATION *location = new_location(LOCCLOSURE);
+  location->value = functionName;
   function->operand_one = location;
 
   TAC *frame = newTac();
@@ -502,17 +541,22 @@ void compile_apply(NODE *tree)
     //Put length in $a1
     TOKEN *functionToken = (TOKEN*)tree->left->left;
     int functionName = getFunctionName(functionToken);
-    FUNCTION_BLOCK *functionBlock = getFunctionBlock(functionName);
 
     TAC *jump_to_func = newTac();
     jump_to_func->operation = JUMPTOFUNC;
-    LOCATION *func_loc = new_location(LOCTOKEN);
-    func_loc->token = functionToken;
+    LOCATION *func_loc = new_location(LOCCLOSURE);
+    func_loc->value = functionName;
+
+    if (functionName == -1)
+    {
+      func_loc = new_location(LOCTOKEN);
+      func_loc->token = functionToken;
+    }
 
     newBlock();
 
     LOCATION *scope = new_location(LOCVALUE);
-    scope->value = whereIsTokenDefined(func_loc->token);
+    scope->value = whereIsTokenDefined(functionToken);
 
     jump_to_func->operand_two = scope;
 

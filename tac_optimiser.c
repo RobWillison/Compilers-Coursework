@@ -7,25 +7,9 @@
 #include "tacBlock.h"
 #include "definitions.h"
 
-
-void constantFolding(TAC_BLOCK *input)
-{
-  TAC *tac = input->tac;
-
-  while (tac)
-  {
-
-  }
-}
-
-int isThisRegisterStoringAConstant(LOCATION *reg)
-{
-  
-}
-
 void optimiseTacBlock(TAC_BLOCK *input)
 {
-  constantFolding(input);
+  //constantFolding(input);
 }
 
 TAC_BLOCK *optimiseTac(TAC_BLOCK *input)

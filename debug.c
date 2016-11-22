@@ -188,16 +188,14 @@ void print_tac(TAC *tac_code)
   } else if (tac_code->operation == JUMPTOFUNC){
     LOCATION *operand_one = tac_code->operand_one;
     int scope = ((LOCATION*)tac_code->operand_two)->value;
-    printf("CALL %s FROM SCOPE %d\n", get_location(operand_one), scope);
+    printf("CALL _%d FROM SCOPE %d\n", operand_one->value, scope);
 
   } else if (tac_code->operation == FUNCTION_DEF){
     LOCATION *location = tac_code->operand_one;
-    TOKEN *function = location->token;
-    printf("%s:\n", function->lexeme);
+    printf("_%d:\n", location->value);
   } else if (tac_code->operation == CREATE_CLOSURE){
     LOCATION *location = tac_code->operand_one;
-    TOKEN *function = location->token;
-    printf("DEFINE CLOSURE %s\n", function->lexeme);
+    printf("DEFINE CLOSURE _%d\n", location->value);
   } else if (tac_code->operation == NEWFRAME){
     LOCATION *arguments = tac_code->destination;
     LOCATION *locals = tac_code->operand_one;
