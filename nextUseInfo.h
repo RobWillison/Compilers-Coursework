@@ -10,6 +10,7 @@ typedef struct VARIABLE_NEXT_USE
   struct TAC *nextUse;
   int live;
   struct VARIABLE_NEXT_USE *next;
+  struct VARIABLE_NEXT_USE *prev;
 } VARIABLE_NEXT_USE;
 
 extern NEXT_USE_INFO *getNextUseInfo(TAC_BLOCK *input);

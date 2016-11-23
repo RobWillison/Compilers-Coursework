@@ -1,0 +1,8 @@
+Loaded: testExceptionHandler.s
+Exception occurred at PC=0x0040019c
+  Unaligned address in inst/data fetch: 0x10020073
+  Exception 4  [Address error in inst/data fetch]  occurred and ignored
+Exception occurred at PC=0x004001a8
+  Unaligned address in inst/data fetch: 0x10020073
+  Exception 4  [Address error in inst/data fetch]  occurred and ignored
+0

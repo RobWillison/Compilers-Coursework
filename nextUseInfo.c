@@ -20,6 +20,14 @@ void print_tac_single(TAC *tac)
   tac->next = temp;
 }
 
+int locationIsALocal(LOCATION *location)
+{
+  if (location->type != LOCTOKEN) return 0;
+  TOKEN *token = location->token;
+
+  return token->type == IDENTIFIER;
+}
+
 void printNextUse()
 {
   NEXT_USE_INFO *pointer = nextUseInfoList;
@@ -47,7 +55,12 @@ NEXT_USE_INFO *newNextUseInfo(VARIABLE_NEXT_USE *variable)
 void addToEndOfNextUseList(VARIABLE_NEXT_USE *variable, VARIABLE_NEXT_USE *list)
 {
   VARIABLE_NEXT_USE *pointer = list;
-  while (pointer->next) pointer = pointer->next;
+  while (pointer->next)
+  {
+    pointer = pointer->next;
+  }
+
+  variable->prev = pointer;
   pointer->next = variable;
 }
 
@@ -61,6 +74,7 @@ void addNextUseInfo(LOCATION *location, int live, TAC *nextUse)
   variable->live = live;
   variable->nextUse = nextUse;
   variable->location = location;
+  variable->prev = 0;
 
   if (!nextUseInfoList)
   {
@@ -93,16 +107,32 @@ NEXT_USE_INFO *getNextUseInfoTac(TAC *tac)
 
   switch (tac->operation) {
     case 'S':
-      addNextUseInfo(tac->destination, 0, tac);
+      if (locationIsALocal(tac->destination))
+      {
+        addNextUseInfo(tac->destination, 1, tac);
+      } else {
+        addNextUseInfo(tac->destination, 0, tac);
+      }
       addNextUseInfo(tac->operand_one, 1, tac);
       break;
     case '+':
     case '-':
     case '*':
     case '/':
-      addNextUseInfo(tac->destination, 0, tac);
+      if (locationIsALocal(tac->destination))
+      {
+        addNextUseInfo(tac->destination, 1, tac);
+      } else {
+        addNextUseInfo(tac->destination, 0, tac);
+      }
       addNextUseInfo(tac->operand_one, 1, tac);
       addNextUseInfo(tac->operand_two, 1, tac);
+    case RETURN:
+      addNextUseInfo(tac->operand_one, 1, tac);
+    case JUMPTOFUNC:
+      addNextUseInfo(tac->operand_one, 1, tac);
+    case SAVE_PARAM:
+      addNextUseInfo(tac->operand_one, 1, tac);
   }
 }
 

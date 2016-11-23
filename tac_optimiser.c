@@ -10,6 +10,33 @@
 #include "MIPS.h"
 #include "instructionSet.h"
 
+void removeTacFromBlock(TAC *tac, TAC_BLOCK *block)
+{
+  printTacBlock(block);
+  TAC *pointer = block->tac;
+
+  if (pointer == tac)
+  {
+    block->tac = pointer->next;
+    return;
+  }
+
+  TAC *prev = pointer;
+  pointer = pointer->next;
+
+  while (pointer)
+  {
+    if (pointer == tac)
+    {
+      prev->next = pointer->next;
+      return;
+    }
+    prev = pointer;
+    pointer = pointer->next;
+  }
+
+}
+
 int compareLocation(LOCATION *one, LOCATION *two)
 {
   if (!one || !two) return 0;
@@ -106,14 +133,63 @@ int copyProporgation(TAC *tac)
   return 0;
 }
 
+int deadCodeElimination(TAC *tac, TAC_BLOCK *block)
+{
+  switch (tac->operation)
+  {
+    case 'S':
+    case '<':
+    case '>':
+    case '*':
+    case '/':
+    case '+':
+    case '-':
+    case LE_OP:
+    case GE_OP:
+    case EQ_OP:
+    case NE_OP:
+      break;
+    default:
+      return 0;
+  }
 
-int optimiseTacOperation(TAC *tac)
+  VARIABLE_NEXT_USE *nextUseInfo = getVariableNextUse(tac->destination);
+
+  while (nextUseInfo)
+  {
+    if (nextUseInfo->nextUse == tac)
+    {
+      if (nextUseInfo->live) return 0;
+      if (!nextUseInfo->prev)
+      {
+        printf("REMOVING %s\n", get_location(tac->destination));
+        removeTacFromBlock(tac, block);
+        return 1;
+      }
+      if (nextUseInfo->prev->live == 0)
+      {
+        printf("REMOVING %s\n", get_location(tac->destination));
+        removeTacFromBlock(tac, block);
+        return 1;
+      }
+    }
+
+    nextUseInfo = nextUseInfo->next;
+  }
+
+  return 0;
+
+}
+
+
+int optimiseTacOperation(TAC *tac, TAC_BLOCK *block)
 {
   int changed = 0;
-  if (tac->next) changed = optimiseTacOperation(tac->next);
+  if (tac->next) changed = optimiseTacOperation(tac->next, block);
 
   changed = changed + constantFolding(tac);
   changed = changed + copyProporgation(tac);
+  changed = changed + deadCodeElimination(tac, block);
 
   return changed;
 }
@@ -122,8 +198,16 @@ void optimiseTacBlock(TAC_BLOCK *input)
 {
   clearNextUseInfo();
   NEXT_USE_INFO *nextUseInfo = getNextUseInfo(input);
+  printNextUse(nextUseInfo);
 
-  while(optimiseTacOperation(input->tac));
+  while(optimiseTacOperation(input->tac, input))
+  {
+    clearNextUseInfo();
+    NEXT_USE_INFO *nextUseInfo = getNextUseInfo(input);
+    printNextUse(nextUseInfo);
+
+    printTacBlock(input);
+  }
 }
 
 TAC_BLOCK *optimiseTac(TAC_BLOCK *input)

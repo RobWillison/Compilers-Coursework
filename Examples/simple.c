@@ -1,7 +1,7 @@
 int main()
 {
   int o = 9;
-  int a = 4;
+  int a = o + 1;
 
-  return 5;
+  return 5 + a;
 }
