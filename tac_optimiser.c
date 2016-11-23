@@ -72,6 +72,7 @@ int constantFolding(TAC *tac)
 
 int copyProporgation(TAC *tac)
 {
+  int changed = 0;
   if (tac->operation != 'S') return 0;
 
   if (tac->operand_two && ((LOCATION*)tac->operand_two)->value != 0) return 0;
@@ -84,16 +85,22 @@ int copyProporgation(TAC *tac)
             && !(pointer->operation == PARAMETER_ALLOCATE && ((LOCATION*)tac->operand_one)->reg == RETURN_REG))
   {
     if (compareLocation(pointer->operand_one, tac->destination))
-          pointer->operand_one = tac->operand_one;
+    {
+      pointer->operand_one = tac->operand_one;
+      changed++;
+    }
 
     if (compareLocation(pointer->operand_two, tac->destination))
-          pointer->operand_two = tac->operand_one;
+    {
+      pointer->operand_two = tac->operand_one;
+      changed++;
+    }
 
 
     pointer = pointer->next;
 
     if (pointer) continue;
-    return 0;
+    return changed;
   }
 
   return 0;
@@ -102,10 +109,13 @@ int copyProporgation(TAC *tac)
 
 int optimiseTacOperation(TAC *tac)
 {
-  if (tac->next) optimiseTacOperation(tac->next);
-  //constantFolding(tac);
-  copyProporgation(tac);
-  return 0;
+  int changed = 0;
+  if (tac->next) changed = optimiseTacOperation(tac->next);
+
+  changed = changed + constantFolding(tac);
+  changed = changed + copyProporgation(tac);
+
+  return changed;
 }
 
 void optimiseTacBlock(TAC_BLOCK *input)
