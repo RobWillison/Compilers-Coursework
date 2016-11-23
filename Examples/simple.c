@@ -1,7 +1,22 @@
+int two()
+{
+  return 2;
+}
+
+int one()
+{
+  return 1;
+}
+
+int three()
+{
+  return 1;
+}
+
 int main()
 {
-  int o = 9;
-  int a = o + 1;
+  int x = one() * two();
+  int y = one() * two();
 
-  return 5 + a;
+  return x + y;
 }

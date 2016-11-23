@@ -12,12 +12,12 @@
 
 void removeTacFromBlock(TAC *tac, TAC_BLOCK *block)
 {
-  printTacBlock(block);
   TAC *pointer = block->tac;
 
   if (pointer == tac)
   {
     block->tac = pointer->next;
+    computeNextUseInfo(block);
     return;
   }
 
@@ -29,11 +29,14 @@ void removeTacFromBlock(TAC *tac, TAC_BLOCK *block)
     if (pointer == tac)
     {
       prev->next = pointer->next;
+      computeNextUseInfo(block);
       return;
     }
     prev = pointer;
     pointer = pointer->next;
   }
+
+
 
 }
 
@@ -162,13 +165,11 @@ int deadCodeElimination(TAC *tac, TAC_BLOCK *block)
       if (nextUseInfo->live) return 0;
       if (!nextUseInfo->prev)
       {
-        printf("REMOVING %s\n", get_location(tac->destination));
         removeTacFromBlock(tac, block);
         return 1;
       }
       if (nextUseInfo->prev->live == 0)
       {
-        printf("REMOVING %s\n", get_location(tac->destination));
         removeTacFromBlock(tac, block);
         return 1;
       }
@@ -178,6 +179,11 @@ int deadCodeElimination(TAC *tac, TAC_BLOCK *block)
   }
 
   return 0;
+
+}
+
+int commonSubExpression(TAC *tac)
+{
 
 }
 
@@ -197,16 +203,12 @@ int optimiseTacOperation(TAC *tac, TAC_BLOCK *block)
 void optimiseTacBlock(TAC_BLOCK *input)
 {
   clearNextUseInfo();
-  NEXT_USE_INFO *nextUseInfo = getNextUseInfo(input);
-  printNextUse(nextUseInfo);
+  NEXT_USE_INFO *nextUseInfo = computeNextUseInfo(input);
 
   while(optimiseTacOperation(input->tac, input))
   {
     clearNextUseInfo();
-    NEXT_USE_INFO *nextUseInfo = getNextUseInfo(input);
-    printNextUse(nextUseInfo);
-
-    printTacBlock(input);
+    NEXT_USE_INFO *nextUseInfo = computeNextUseInfo(input);
   }
 }
 

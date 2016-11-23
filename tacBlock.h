@@ -21,3 +21,6 @@ extern TAC_BLOCK *getHeadTacBlock();
 extern LOCATION *getLastInstructionDestination();
 extern int getLastInstructionOperation();
 extern void startGlobalBlock();
+extern int countLocalsInBlock(FUNCTION_BLOCK *block);
+extern int countTemporiesInBlock(FUNCTION_BLOCK *block);
+extern void endFunctionBlock();

@@ -628,12 +628,12 @@ void compile_tree(NODE *tree)
       compile_math(tree);
       break;
     case '~':
-      if (tree->left->type == 'D')
+      if (tree->left->type == LEAF)
       {
+        compile_declaration(tree);
+      } else {
         compile_tree(tree->left);
         compile_tree(tree->right);
-      } else {
-        compile_declaration(tree);
       }
       break;
     case IF:

@@ -310,7 +310,7 @@ MIPS *translate_math(TAC *tac_code)
   MIPS *load_operand_two = loadLocationIntoReg(tac_code->operand_two, 10);
 
   //Do the math operation
-  MIPS *math_instruction = create_mips_instruction(tac_code->operation, 8, load_operand_one->destination, load_operand_two->destination);
+  MIPS *math_instruction = create_mips_instruction(tac_code->operation, 8, 9, 10);
 
   MIPS *store_instruction;
   //Save the result
@@ -369,7 +369,7 @@ MIPS *translate_logic(TAC *tac_code)
   MIPS *load_operand_two = loadLocationIntoReg(tac_code->operand_two, 10);
 
   //Check which is greater than
-  MIPS *less_than = create_mips_instruction(SET_LESS_THAN_INS, 8, load_operand_one->destination, load_operand_two->destination);
+  MIPS *less_than = create_mips_instruction(SET_LESS_THAN_INS, 8, 9, 10);
 
   //if its a greater than swap operands
   if (tac_code->operation == '>' || tac_code->operation == GE_OP) {

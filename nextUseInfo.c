@@ -11,14 +11,14 @@
 
 NEXT_USE_INFO *nextUseInfoList = NULL;
 
-void print_tac_single(TAC *tac)
-{
-  if (!tac) return;
-  TAC *temp = tac->next;
-  tac->next = NULL;
-  print_tac(tac);
-  tac->next = temp;
-}
+// void print_tac_single(TAC *tac)
+// {
+//   if (!tac) return;
+//   TAC *temp = tac->next;
+//   tac->next = NULL;
+//
+//   tac->next = temp;
+// }
 
 int locationIsALocal(LOCATION *location)
 {
@@ -28,25 +28,41 @@ int locationIsALocal(LOCATION *location)
   return token->type == IDENTIFIER;
 }
 
-void printNextUse()
-{
-  NEXT_USE_INFO *pointer = nextUseInfoList;
-  while (pointer) {
-    VARIABLE_NEXT_USE *var = pointer->variable;
-    printf("VARIBALE %s\n", get_location(var->location));
-    while (var)
-    {
-      printf("Live: %d\n", var->live);
-      print_tac_single(var->nextUse);
-      var = var->next;
-    }
-    pointer = pointer->next;
-  }
-}
+// void printNextUse()
+// {
+//   NEXT_USE_INFO *pointer = nextUseInfoList;
+//   while (pointer) {
+//     VARIABLE_NEXT_USE *var = pointer->variable;
+//     printf("VARIBALE %s\n", get_location(var->location));
+//     while (var)
+//     {
+//       printf("Live: %d\n", var->live);
+//       print_tac_single(var->nextUse);
+//       var = var->next;
+//     }
+//     pointer = pointer->next;
+//   }
+// }
 
 NEXT_USE_INFO *newNextUseInfo(VARIABLE_NEXT_USE *variable)
 {
   NEXT_USE_INFO *nextUse = (NEXT_USE_INFO*)malloc(sizeof(NEXT_USE_INFO));
+
+
+  if (locationIsALocal(variable->location))
+  {
+    VARIABLE_NEXT_USE *varNextUse = (VARIABLE_NEXT_USE*)malloc(sizeof(VARIABLE_NEXT_USE));
+    varNextUse->live = 1;
+    varNextUse->nextUse = NULL;
+    varNextUse->location = variable->location;
+
+    nextUse->variable = varNextUse;
+    varNextUse->next = variable;
+    variable->prev = varNextUse;
+
+    return nextUse;
+  }
+
   nextUse->variable = variable;
 
   return nextUse;
@@ -101,30 +117,20 @@ void addNextUseInfo(LOCATION *location, int live, TAC *nextUse)
   pointer->next = newNextUseInfo(variable);
 }
 
-NEXT_USE_INFO *getNextUseInfoTac(TAC *tac)
+NEXT_USE_INFO *computeNextUseInfoTac(TAC *tac)
 {
-  if (tac->next) getNextUseInfoTac(tac->next);
+  if (tac->next) computeNextUseInfoTac(tac->next);
 
   switch (tac->operation) {
     case 'S':
-      if (locationIsALocal(tac->destination))
-      {
-        addNextUseInfo(tac->destination, 1, tac);
-      } else {
-        addNextUseInfo(tac->destination, 0, tac);
-      }
+      addNextUseInfo(tac->destination, 0, tac);
       addNextUseInfo(tac->operand_one, 1, tac);
       break;
     case '+':
     case '-':
     case '*':
     case '/':
-      if (locationIsALocal(tac->destination))
-      {
-        addNextUseInfo(tac->destination, 1, tac);
-      } else {
-        addNextUseInfo(tac->destination, 0, tac);
-      }
+      addNextUseInfo(tac->destination, 0, tac);
       addNextUseInfo(tac->operand_one, 1, tac);
       addNextUseInfo(tac->operand_two, 1, tac);
     case RETURN:
@@ -147,9 +153,9 @@ VARIABLE_NEXT_USE *getVariableNextUse(LOCATION *target)
   }
 }
 
-NEXT_USE_INFO *getNextUseInfo(TAC_BLOCK *input)
+NEXT_USE_INFO *computeNextUseInfo(TAC_BLOCK *input)
 {
-  NEXT_USE_INFO *temp = getNextUseInfoTac(input->tac);
+  NEXT_USE_INFO *temp = computeNextUseInfoTac(input->tac);
   return temp;
 }
 

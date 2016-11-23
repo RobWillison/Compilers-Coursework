@@ -11,6 +11,8 @@ FUNCTION_BLOCK *functionLookupListCurrent = NULL;
 TAC_BLOCK *headBlock = NULL;
 TAC_BLOCK *tailBlock = NULL;
 
+FUNCTION_BLOCK *functionLookupListPrevious = NULL;
+
 void startGlobalBlock()
 {
   addFunctionBlock(-1);
@@ -40,6 +42,7 @@ void addFunctionBlock(int functionName)
   if (!functionLookupListHead)
   {
     functionLookupListHead = function;
+    functionLookupListPrevious = functionLookupListCurrent;
     functionLookupListCurrent = function;
     return;
   }
@@ -50,12 +53,13 @@ void addFunctionBlock(int functionName)
   function->prev = functionLookupListTail;
   functionLookupListTail->next = function;
   functionLookupListTail = function;
+  functionLookupListPrevious = functionLookupListCurrent;
   functionLookupListCurrent = function;
 }
 
 void endFunctionBlock()
 {
-  functionLookupListCurrent = functionLookupListCurrent->prev;
+  functionLookupListCurrent = functionLookupListPrevious;
   headBlock = functionLookupListCurrent->block;
   tailBlock = headBlock;
 
