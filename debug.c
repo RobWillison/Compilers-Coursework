@@ -28,7 +28,7 @@ char *get_location(LOCATION *loc)
       return t->lexeme;
     }
   } else {
-    char *result = malloc(sizeof(char) * 3);
+    char *result = malloc(sizeof(char) * 10);
     sprintf(result, "%d", loc->value);
     return result;
   }
@@ -161,7 +161,7 @@ void print_tac(TAC *tac_code)
     LOCATION *destination = tac_code->destination;
     LOCATION *operand_one = tac_code->operand_one;
     LOCATION *operand_two = tac_code->operand_two;
-    if (operand_two)
+    if (operand_two && operand_two->value != 0)
     {
       int scope = operand_two->value;
       printf("DEFINED IN %d ", scope);

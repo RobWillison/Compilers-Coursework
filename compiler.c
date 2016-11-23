@@ -140,6 +140,26 @@ int store_value(LOCATION *tac_location)
   return memory_location;
 }
 
+MIPS *loadLocationIntoReg(LOCATION *location, int reg)
+{
+  if (location->type == LOCVALUE)
+  {
+    return create_mips_instruction(LOADIMEDIATE_INS, reg, location->value, 0);
+  }
+  if (location->type == LOCTOKEN && ((TOKEN*)location->token)->type == CONSTANT)
+  {
+    return create_mips_instruction(LOADIMEDIATE_INS, reg, ((TOKEN*)location->token)->value, 0);
+  }
+  if (location->type == LOCREG)
+  {
+    if (location->reg == RETURN_REG) return create_mips_instruction(MOVE, 0, reg, MIPS_RETURN_REG);
+
+    return create_mips_instruction(LOADWORD_INS, reg, 30, get_memory_location_from_env(location));
+  }
+  //Load two operands into memory
+  return create_mips_instruction(LOADWORD_INS, reg, 30, get_memory_location_from_env(location));
+}
+
 MIPS *create_activation_record(TAC *tac_code)
 {
   int args = ((LOCATION*)tac_code->destination)->value;
@@ -285,10 +305,9 @@ MIPS *translate_store(TAC *tac_code)
 MIPS *translate_math(TAC *tac_code)
 {
   //Load two operands into memory
-  MIPS *load_operand_one = create_mips_instruction(LOADWORD_INS, 9, 30, get_memory_location_from_env(tac_code->operand_one));
-
+  MIPS *load_operand_one = loadLocationIntoReg(tac_code->operand_one, 9);
   //Load two operands into registers
-  MIPS *load_operand_two = create_mips_instruction(LOADWORD_INS, 10, 30, get_memory_location_from_env(tac_code->operand_two));
+  MIPS *load_operand_two = loadLocationIntoReg(tac_code->operand_two, 10);
 
   //Do the math operation
   MIPS *math_instruction = create_mips_instruction(tac_code->operation, 8, load_operand_one->destination, load_operand_two->destination);
@@ -314,10 +333,10 @@ MIPS *translate_math(TAC *tac_code)
 MIPS *translate_equality_check(TAC *tac_code)
 {
   //Load two operands into memory
-  MIPS *load_operand_one = create_mips_instruction(LOADWORD_INS, 9, 30, get_memory_location_from_env(tac_code->operand_one));
+  MIPS *load_operand_one = loadLocationIntoReg(tac_code->operand_one, 9);
 
   //Load two operands into registers
-  MIPS *load_operand_two = create_mips_instruction(LOADWORD_INS, 10, 30, get_memory_location_from_env(tac_code->operand_two));
+  MIPS *load_operand_two = loadLocationIntoReg(tac_code->operand_two, 10);
 
   //Subtract one from the other
   MIPS *subract = create_mips_instruction('-', 8, load_operand_one->destination, load_operand_two->destination);
@@ -344,10 +363,10 @@ MIPS *translate_equality_check(TAC *tac_code)
 MIPS *translate_logic(TAC *tac_code)
 {
   //Load two operands into memory
-  MIPS *load_operand_one = create_mips_instruction(LOADWORD_INS, 9, 30, get_memory_location_from_env(tac_code->operand_one));
+  MIPS *load_operand_one = loadLocationIntoReg(tac_code->operand_one, 9);
 
   //Load two operands into registers
-  MIPS *load_operand_two = create_mips_instruction(LOADWORD_INS, 10, 30, get_memory_location_from_env(tac_code->operand_two));
+  MIPS *load_operand_two = loadLocationIntoReg(tac_code->operand_two, 10);
 
   //Check which is greater than
   MIPS *less_than = create_mips_instruction(SET_LESS_THAN_INS, 8, load_operand_one->destination, load_operand_two->destination);
@@ -389,12 +408,9 @@ MIPS *translate_return(TAC *tac_code)
   //This method loads either an imediate value or memory value and stores it to
   //another memory location
   LOCATION *operand = tac_code->operand_one;
-  LOCATION *destination = tac_code->destination;
 
-  MIPS *load_instruction = 0;
-  if (operand->reg != RETURN_REG){
-    load_instruction = create_load_ins(destination, operand);
-  }
+  MIPS *load_instruction = loadLocationIntoReg(operand, MIPS_RETURN_REG);
+
 
   //Jump back to the return address
   //Load $ra out of the frame
@@ -510,7 +526,7 @@ MIPS *allocate_space_for_params(TAC *tac_code)
 MIPS *put_param_in_memory(TAC *tac_code)
 {
   //load values
-  MIPS *load_operand_one = create_mips_instruction(LOADWORD_INS, 8, 30, get_memory_location_from_env(tac_code->operand_one));
+  MIPS *load_operand_one = loadLocationIntoReg(tac_code->operand_one, 8);
 
   //save in space
   MIPS *store_instruction = create_mips_instruction(STOREWORD, 2, 0, 8);

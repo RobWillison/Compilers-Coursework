@@ -6,99 +6,114 @@
 #include "TACstruct.h"
 #include "tacBlock.h"
 #include "definitions.h"
+#include "nextUseInfo.h"
+#include "MIPS.h"
+#include "instructionSet.h"
 
-typedef struct NEXT_USE_INFO
+int compareLocation(LOCATION *one, LOCATION *two)
 {
-  struct VARIABLE_NEXT_USE *variable;
-  struct NEXT_USE_INFO *next;
-} NEXT_USE_INFO;
+  if (!one || !two) return 0;
 
-typedef struct VARIABLE_NEXT_USE
-{
-  struct LOCATION *location;
-  struct TAC *nextUse;
-  int live;
-  struct VARIABLE_NEXT_USE *next;
-} VARIABLE_NEXT_USE;
-
-NEXT_USE_INFO *nextUseInfoList = NULL;
-
-NEXT_USE_INFO *newNextUseInfo(VARIABLE_NEXT_USE *variable)
-{
-  NEXT_USE_INFO *nextUse = (NEXT_USE_INFO*)malloc(sizeof(NEXT_USE_INFO));
-  nextUse->variable = variable;
-
-  return nextUse;
+  return (one->type == LOCREG && two->type == LOCREG && one->reg == two->reg)
+        || (one->type == LOCTOKEN && two->type == LOCTOKEN && one->token == two->token)
+        || (one->type == LOCVALUE && two->type == LOCVALUE && one->value == two->value)
+        || (one->type == LOCCLOSURE && two->type == LOCCLOSURE && one->value == two->value);
 }
 
-void addToEndOfNextUseList(VARIABLE_NEXT_USE *variable, VARIABLE_NEXT_USE *list)
+int constantFolding(TAC *tac)
 {
-  VARIABLE_NEXT_USE *pointer = list;
-  while (pointer->next) pointer = pointer->next;
-  pointer->next = variable;
-}
 
-VARIABLE_NEXT_USE *addNextUseInfo(LOCATION *location, int live, TAC *nextUse)
-{
-  VARIABLE_NEXT_USE *variable = (VARIABLE_NEXT_USE*)malloc(sizeof(VARIABLE_NEXT_USE));
-  variable->live = live;
-  variable->nextUse = nextUse;
-
-  if (!nextUseInfoList)
-  {
-    nextUseInfoList = newNextUseInfo(variable);
-    return;
-  }
-
-  NEXT_USE_INFO *pointer = nextUseInfoList;
-  while(pointer)
-  {
-    if (((VARIABLE_NEXT_USE*)pointer->variable)->location == location)
-    {
-      addToEndOfNextUseList(variable, pointer->variable);
-      return;
-    }
-
-    if (!pointer->next) break;
-
-    pointer = pointer->next;
-  }
-
-  pointer->next = newNextUseInfo(variable);
-}
-
-NEXT_USE_INFO *getNextUseInfoTac(TAC *tac)
-{
-  if (tac->next) getNextUseInfoTac(tac->next);
-
-  LOCATION *destination = tac->destination;
   LOCATION *operandOne = tac->operand_one;
   LOCATION *operandTwo = tac->operand_two;
 
-  if (destination)
-  {
-    addNextUseInfo(destination, 0, NULL);
-  }
-  if (operandOne)
-  {
-    addNextUseInfo(operandOne, 1, tac);
-  }
-  if (operandTwo)
-  {
-    addNextUseInfo(operandTwo, 1, tac);
+  if (!(operandOne && operandTwo)) return 0;
+
+  TAC *operandOneDef = getDefinitionTac(tac, operandOne);
+  TAC *operandTwoDef = getDefinitionTac(tac, operandTwo);
+
+  if (!operandOneDef) return 0;
+  if (!operandTwoDef) return 0;
+
+  if (!(operandOneDef->operation == 'S' && operandTwoDef->operation == 'S')) return 0;
+
+  LOCATION *operandOneLoc = operandOneDef->operand_one;
+  LOCATION *operandTwoLoc = operandTwoDef->operand_one;
+
+  if (operandOneLoc->type != LOCTOKEN || operandTwoLoc->type != LOCTOKEN) return 0;
+
+  TOKEN *operandOneTok = operandOneLoc->token;
+  TOKEN *operandTwoTok = operandTwoLoc->token;
+
+  if (operandOneTok->type != CONSTANT || operandTwoTok->type != CONSTANT) return 0;
+
+  LOCATION *newLocation = new_location(LOCVALUE);
+  tac->operand_one = newLocation;
+
+  switch (tac->operation) {
+    case '+':
+      newLocation->value = operandOneTok->value + operandTwoTok->value;
+      break;
+    case '-':
+      newLocation->value = operandOneTok->value - operandTwoTok->value;
+      break;
+    case '/':
+      newLocation->value = operandOneTok->value / operandTwoTok->value;
+      break;
+    case '*':
+      newLocation->value = operandOneTok->value * operandTwoTok->value;
+      break;
   }
 
-  return nextUseInfoList;
+  tac->operation = 'S';
+  tac->operand_two = 0;
+
+  return 1;
 }
 
-NEXT_USE_INFO *getNextUseInfo(TAC_BLOCK *input)
+int copyProporgation(TAC *tac)
 {
-  return getNextUseInfoTac(input->tac);
+  if (tac->operation != 'S') return 0;
+
+  if (tac->operand_two && ((LOCATION*)tac->operand_two)->value != 0) return 0;
+
+  TAC *pointer = tac;
+  pointer = pointer->next;
+  if (!pointer) return 0;
+
+  while (!compareLocation(pointer->destination, tac->operand_one)
+            && !(pointer->operation == PARAMETER_ALLOCATE && ((LOCATION*)tac->operand_one)->reg == RETURN_REG))
+  {
+    if (compareLocation(pointer->operand_one, tac->destination))
+          pointer->operand_one = tac->operand_one;
+
+    if (compareLocation(pointer->operand_two, tac->destination))
+          pointer->operand_two = tac->operand_one;
+
+
+    pointer = pointer->next;
+
+    if (pointer) continue;
+    return 0;
+  }
+
+  return 0;
+}
+
+
+int optimiseTacOperation(TAC *tac)
+{
+  if (tac->next) optimiseTacOperation(tac->next);
+  //constantFolding(tac);
+  copyProporgation(tac);
+  return 0;
 }
 
 void optimiseTacBlock(TAC_BLOCK *input)
 {
-  getNextUseInfo(input);
+  clearNextUseInfo();
+  NEXT_USE_INFO *nextUseInfo = getNextUseInfo(input);
+
+  while(optimiseTacOperation(input->tac));
 }
 
 TAC_BLOCK *optimiseTac(TAC_BLOCK *input)

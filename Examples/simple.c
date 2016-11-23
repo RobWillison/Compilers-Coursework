@@ -1,8 +1,9 @@
 int main()
 {
-  int o;
+  int o = 9;
+  int a = 4;
 
-  o = 9 + 1;
+  o = a + o;
 
   return o;
 }

@@ -314,6 +314,8 @@ void compile_while(NODE *tree)
   end_label->value = get_label();
   jump_to_end->operand_one = end_label;
 
+  newBlock();
+
   LOCATION *start_label = new_location(LABEL);
   start_label->value = get_label();
 
@@ -322,6 +324,8 @@ void compile_while(NODE *tree)
   label_start->label = start_label->value;
 
   compile_tree(tree->right);
+
+  newBlock();
 
   TAC *label_end = newTac();
   label_end->operation = LABEL;
@@ -336,6 +340,9 @@ void compile_while(NODE *tree)
 
   if_statement->operand_one = condition_destination;
   if_statement->operand_two = start_label;
+
+  newBlock();
+
 }
 
 int count_locals(TAC *tac_code)
