@@ -152,6 +152,7 @@ void compile_math(NODE *tree)
 {
   compile_tree(tree->left);
   LOCATION *operand_one_location = getLastInstructionDestination();
+  
   compile_tree(tree->right);
   LOCATION *operand_two_location = getLastInstructionDestination();
 

@@ -35,9 +35,15 @@ void removeTacFromBlock(TAC *tac, TAC_BLOCK *block)
     prev = pointer;
     pointer = pointer->next;
   }
+}
 
-
-
+int compareTokens(TOKEN *one, TOKEN *two)
+{
+  if (one->type == CONSTANT && two->type == CONSTANT)
+  {
+    return one->value == two->value;
+  }
+  return one == two;
 }
 
 int compareLocation(LOCATION *one, LOCATION *two)
@@ -45,9 +51,19 @@ int compareLocation(LOCATION *one, LOCATION *two)
   if (!one || !two) return 0;
 
   return (one->type == LOCREG && two->type == LOCREG && one->reg == two->reg)
-        || (one->type == LOCTOKEN && two->type == LOCTOKEN && one->token == two->token)
+        || ((one->type == LOCTOKEN && two->type == LOCTOKEN) && compareTokens(one->token, two->token))
         || (one->type == LOCVALUE && two->type == LOCVALUE && one->value == two->value)
         || (one->type == LOCCLOSURE && two->type == LOCCLOSURE && one->value == two->value);
+}
+
+int compareTacExp(TAC *tac1, TAC *tac2)
+{
+  if (tac1->operation != tac2->operation) return 0;
+
+  if (!compareLocation(tac1->operand_one, tac2->operand_one)) return 0;
+  if (!compareLocation(tac1->operand_two, tac2->operand_two)) return 0;
+
+  return 1;
 }
 
 int constantFolding(TAC *tac)
@@ -184,7 +200,107 @@ int deadCodeElimination(TAC *tac, TAC_BLOCK *block)
 
 int commonSubExpression(TAC *tac)
 {
+  int changed = 0;
+  switch (tac->operation)
+  {
+    case 'S':
+    case '<':
+    case '>':
+    case '*':
+    case '/':
+    case '+':
+    case '-':
+    case LE_OP:
+    case GE_OP:
+    case EQ_OP:
+    case NE_OP:
+      break;
+    default:
+      return 0;
+  }
+  TAC *nextTac = tac->next;
+  while (nextTac)
+  {
+    if (compareTacExp(tac, nextTac))
+    {
+      nextTac->operation = 'S';
+      nextTac->operand_one = tac->destination;
+      nextTac->operand_two = NULL;
+      changed++;
+    }
+    nextTac = nextTac->next;
+  }
+  return changed;
+}
 
+int algebraicTransformations(TAC *tac)
+{
+  LOCATION *firstOp = tac->operand_one;
+  LOCATION *secondOp = tac->operand_two;
+  //x + 0 -> x
+  //x - 0 -> x
+  //x * 1 -> x
+  //1 * x -> x
+  //x / 1 -> x
+  TOKEN *oneToken = new_token(CONSTANT);
+  oneToken->value = 1;
+  TOKEN *zeroToken = new_token(CONSTANT);
+  zeroToken->value = 0;
+
+  if (tac->operation == '+')
+  {
+    if (firstOp->type == LOCTOKEN && compareTokens(firstOp->token, zeroToken))
+    {
+      tac->operation = 'S';
+      tac->operand_one = tac->operand_two;
+      tac->operand_two = NULL;
+      return 1;
+    }
+    if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, zeroToken))
+    {
+      tac->operation = 'S';
+      tac->operand_two = NULL;
+      return 1;
+    }
+  }
+
+  if (tac->operation == '-')
+  {
+    if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, zeroToken))
+    {
+      tac->operation = 'S';
+      tac->operand_two = NULL;
+      return 1;
+    }
+  }
+
+  if (tac->operation == '*')
+  {
+    if (firstOp->type == LOCTOKEN && compareTokens(firstOp->token, oneToken))
+    {
+      tac->operation = 'S';
+      tac->operand_one = tac->operand_two;
+      tac->operand_two = NULL;
+      return 1;
+    }
+    if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, oneToken))
+    {
+      tac->operation = 'S';
+      tac->operand_two = NULL;
+      return 1;
+    }
+  }
+
+  if (tac->operation == '/')
+  {
+    if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, oneToken))
+    {
+      tac->operation = 'S';
+      tac->operand_two = NULL;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 
@@ -193,10 +309,11 @@ int optimiseTacOperation(TAC *tac, TAC_BLOCK *block)
   int changed = 0;
   if (tac->next) changed = optimiseTacOperation(tac->next, block);
 
-  changed = changed + constantFolding(tac);
+  //changed = changed + constantFolding(tac);
   changed = changed + copyProporgation(tac);
-  changed = changed + deadCodeElimination(tac, block);
-
+  //changed = changed + deadCodeElimination(tac, block);
+  //changed = changed + commonSubExpression(tac);
+  changed = changed + algebraicTransformations(tac);
   return changed;
 }
 

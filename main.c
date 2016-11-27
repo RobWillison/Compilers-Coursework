@@ -420,12 +420,11 @@ int main(int argc, char** argv)
       printf("COMPILED TO TAC\n");
       printTacBlock(taccode);
       taccode = optimiseTac(taccode);
-      printf("TAC OPTIMISING\n");
+      printf("TAC OPTIMISED\n");
       printTacBlock(taccode);
-      printf("TRANSLATE TO MIPS\n");
+      printf("TRANSLATING TO MIPS\n");
       MIPS *ins = translate_tac(taccode);
       printf("TRANSLATED TO MIPS\n");
-      printf("OPTIMISING\n");
       ins = optimise(ins);
       FILE *file = fopen("Output/test.asm", "w");
       fprintf(file, ".globl main\n\n.text\n\n");
