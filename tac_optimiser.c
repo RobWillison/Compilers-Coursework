@@ -74,40 +74,44 @@ int constantFolding(TAC *tac)
 
   if (!(operandOne && operandTwo)) return 0;
 
-  TAC *operandOneDef = getDefinitionTac(tac, operandOne);
-  TAC *operandTwoDef = getDefinitionTac(tac, operandTwo);
+  if (operandOne->type != LOCTOKEN || operandTwo->type != LOCTOKEN) return 0;
 
-  if (!operandOneDef) return 0;
-  if (!operandTwoDef) return 0;
-
-  if (!(operandOneDef->operation == 'S' && operandTwoDef->operation == 'S')) return 0;
-
-  LOCATION *operandOneLoc = operandOneDef->operand_one;
-  LOCATION *operandTwoLoc = operandTwoDef->operand_one;
-
-  if (operandOneLoc->type != LOCTOKEN || operandTwoLoc->type != LOCTOKEN) return 0;
-
-  TOKEN *operandOneTok = operandOneLoc->token;
-  TOKEN *operandTwoTok = operandTwoLoc->token;
+  TOKEN *operandOneTok = operandOne->token;
+  TOKEN *operandTwoTok = operandTwo->token;
 
   if (operandOneTok->type != CONSTANT || operandTwoTok->type != CONSTANT) return 0;
 
-  LOCATION *newLocation = new_location(LOCVALUE);
-  tac->operand_one = newLocation;
+  LOCATION *newLocation = new_location(LOCTOKEN);
+  TOKEN *newToken = new_token(CONSTANT);
+  newLocation->token = newToken;
 
   switch (tac->operation) {
     case '+':
-      newLocation->value = operandOneTok->value + operandTwoTok->value;
+      tac->operand_one = newLocation;
+      newToken->value = operandOneTok->value + operandTwoTok->value;
       break;
     case '-':
-      newLocation->value = operandOneTok->value - operandTwoTok->value;
+      tac->operand_one = newLocation;
+      newToken->value = operandOneTok->value - operandTwoTok->value;
       break;
     case '/':
-      newLocation->value = operandOneTok->value / operandTwoTok->value;
+      tac->operand_one = newLocation;
+      newToken->value = operandOneTok->value / operandTwoTok->value;
       break;
     case '*':
-      newLocation->value = operandOneTok->value * operandTwoTok->value;
+      tac->operand_one = newLocation;
+      newToken->value = operandOneTok->value * operandTwoTok->value;
       break;
+    case '>':
+      tac->operand_one = newLocation;
+      newToken->value = operandOneTok->value > operandTwoTok->value;
+      break;
+    case '<':
+      tac->operand_one = newLocation;
+      newToken->value = operandOneTok->value < operandTwoTok->value;
+      break;
+    default:
+      return 0;
   }
 
   tac->operation = 'S';
@@ -118,6 +122,7 @@ int constantFolding(TAC *tac)
 
 int copyProporgation(TAC *tac)
 {
+
   int changed = 0;
   if (tac->operation != 'S') return 0;
 
@@ -127,9 +132,32 @@ int copyProporgation(TAC *tac)
   pointer = pointer->next;
   if (!pointer) return 0;
 
-  while (!compareLocation(pointer->destination, tac->operand_one)
+  while (pointer && !compareLocation(pointer->destination, tac->operand_one)
             && !(pointer->operation == PARAMETER_ALLOCATE && ((LOCATION*)tac->operand_one)->reg == RETURN_REG))
   {
+    int validOp = 0;
+    switch (pointer->operation)
+    {
+      case 'S':
+      case '<':
+      case '>':
+      case '*':
+      case '/':
+      case '+':
+      case '-':
+      case LE_OP:
+      case GE_OP:
+      case EQ_OP:
+      case NE_OP:
+      case RETURN:
+        validOp = 1;
+        break;
+      default:
+        pointer = pointer->next;
+    }
+
+    if (!validOp) continue;
+
     if (compareLocation(pointer->operand_one, tac->destination))
     {
       pointer->operand_one = tac->operand_one;
@@ -142,14 +170,13 @@ int copyProporgation(TAC *tac)
       changed++;
     }
 
-
     pointer = pointer->next;
 
     if (pointer) continue;
     return changed;
   }
 
-  return 0;
+  return changed;
 }
 
 int deadCodeElimination(TAC *tac, TAC_BLOCK *block)
@@ -203,7 +230,6 @@ int commonSubExpression(TAC *tac)
   int changed = 0;
   switch (tac->operation)
   {
-    case 'S':
     case '<':
     case '>':
     case '*':
@@ -225,7 +251,8 @@ int commonSubExpression(TAC *tac)
     {
       nextTac->operation = 'S';
       nextTac->operand_one = tac->destination;
-      nextTac->operand_two = NULL;
+      LOCATION *definedIn = new_location(LOCVALUE);
+      nextTac->operand_two = definedIn;
       changed++;
     }
     nextTac = nextTac->next;
@@ -310,10 +337,11 @@ int optimiseTacOperation(TAC *tac, TAC_BLOCK *block)
   if (tac->next) changed = optimiseTacOperation(tac->next, block);
 
   //changed = changed + constantFolding(tac);
-  changed = changed + copyProporgation(tac);
+  //changed = changed + copyProporgation(tac);
   //changed = changed + deadCodeElimination(tac, block);
   //changed = changed + commonSubExpression(tac);
-  changed = changed + algebraicTransformations(tac);
+  //changed = changed + algebraicTransformations(tac);
+
   return changed;
 }
 
@@ -326,6 +354,7 @@ void optimiseTacBlock(TAC_BLOCK *input)
   {
     clearNextUseInfo();
     NEXT_USE_INFO *nextUseInfo = computeNextUseInfo(input);
+    printTacBlock(input);
   }
 }
 

@@ -25,7 +25,6 @@ extern MIPS* new_mips();
 
 extern char *get_instruction(int instruction);
 extern MIPS *create_mips_instruction(int x, int y, int z, int a);
-extern MIPS *create_load_ins(LOCATION *destination, LOCATION *operand);
 extern MIPS *getProgramHead();
 extern void newMIPSBlock();
 extern void add_MIPS_to_list(MIPS *head, MIPS *tail);

@@ -139,6 +139,8 @@ NEXT_USE_INFO *computeNextUseInfoTac(TAC *tac)
       addNextUseInfo(tac->operand_one, 1, tac);
     case SAVE_PARAM:
       addNextUseInfo(tac->operand_one, 1, tac);
+    case IF_NOT:
+      addNextUseInfo(tac->operand_one, 1, tac);
   }
 }
 

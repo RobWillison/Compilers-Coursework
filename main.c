@@ -296,11 +296,17 @@ UNION* intepret_body(NODE *tree, FRAME *enviroment)
 
     case '~':
       if (tree->left->left->type == INT) {
+
         TOKEN *token = (TOKEN*)tree->right->left->left;
 
         UNION *result = new_union(INT);
 
-        if (tree->right->right) result->value = ((TOKEN*)tree->right->right->left)->value;
+        if (token->type == CONSTANT){
+          if (tree->right->right) result->value = ((TOKEN*)tree->right->right->left)->value;
+        } else {
+          if (tree->right->right) result = intepret_body(tree->right->right, enviroment);
+        }
+
 
 
         store_variable(enviroment, token, result);

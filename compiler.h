@@ -1,4 +1,5 @@
 #define INMEMORY 1
+#define INREG 2
 
 extern MIPS *translate_tac(TAC_BLOCK *tac);
 

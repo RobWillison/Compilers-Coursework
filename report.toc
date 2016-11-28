@@ -5,5 +5,11 @@
 \contentsline {subsection}{\numberline {3.2}TAC Generation}{4}
 \contentsline {subsubsection}{\numberline {3.2.1}Enviroment Structure}{4}
 \contentsline {subsubsection}{\numberline {3.2.2}TAC Blocking}{5}
+\contentsline {subsubsection}{\numberline {3.2.3}Inner functions}{6}
 \contentsline {subsection}{\numberline {3.3}TAC Optimisation}{6}
-\contentsline {section}{\numberline {4}Machine Code Generation}{6}
+\contentsline {subsubsection}{\numberline {3.3.1}Copy Propagation}{6}
+\contentsline {subsubsection}{\numberline {3.3.2}Constant Folding}{6}
+\contentsline {subsubsection}{\numberline {3.3.3}Dead Code Elimination}{7}
+\contentsline {subsubsection}{\numberline {3.3.4}Common Sub Expression Elimination}{7}
+\contentsline {subsubsection}{\numberline {3.3.5}Algebraic Transformations}{8}
+\contentsline {section}{\numberline {4}Machine Code Generation}{8}

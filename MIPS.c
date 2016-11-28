@@ -5,8 +5,6 @@
 #include "MIPS.h"
 #include "instructionSet.h"
 
-extern int get_memory_location_from_env(LOCATION *target);
-
 const char *registers[] = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 
 MIPS_BLOCK *programHeadBlock = NULL;
@@ -114,34 +112,6 @@ MIPS *new_mips()
   ins->next = 0;
   addToHeadOfProgram(ins);
   return ins;
-}
-
-MIPS *create_load_ins(LOCATION *destination, LOCATION *operand)
-{
-  MIPS *load_instruction = new_mips();
-  load_instruction->destination = MIPS_RETURN_REG;
-  load_instruction->operand_one = 30;
-  if (operand->type == LOCTOKEN)
-  {
-    //if its in a token i.e. value or variable
-    TOKEN *token = operand->token;
-    if (token->type == CONSTANT)
-    {
-      //Its a value do a load imediate
-      load_instruction->instruction = LOADIMEDIATE_INS;
-      load_instruction->operand_two = token->value;
-    } else {
-      //Its a value do a load imediate
-      load_instruction->instruction = LOADWORD_INS;
-      load_instruction->operand_two = get_memory_location_from_env(operand);
-    }
-  } else {
-    //If its in a memory location
-    load_instruction->instruction = LOADWORD_INS;
-    load_instruction->operand_two = get_memory_location_from_env(operand);
-  }
-
-  return load_instruction;
 }
 
 MIPS *create_mips_instruction(int type, int destination, int operand_one, int operand_two)

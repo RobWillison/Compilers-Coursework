@@ -256,6 +256,9 @@ void print_mips(MIPS *mips, FILE *file)
     case MOVE:
       fprintf(file, "%s %s %s\n", get_instruction(mips->instruction), registers[mips->operand_one], registers[mips->operand_two]);
       break;
+    case MOVE_TEMP_REG:
+      fprintf(file, "MOVE %d %s\n", mips->operand_one, registers[mips->operand_two]);
+      break;
     case MOVE_LOW_INS:
     case JUMP_REG:
       fprintf(file, "%s %s\n", get_instruction(mips->instruction), registers[mips->destination]);

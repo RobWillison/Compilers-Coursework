@@ -18,6 +18,8 @@
 #define LOADADDRESS 19
 #define JUMP_LINK_REG 20
 
+#define MOVE_TEMP_REG 21
+
 #define MIPS_RETURN_REG 2
 
 #define RETURN_REG 999
