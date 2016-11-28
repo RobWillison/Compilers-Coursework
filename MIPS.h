@@ -8,8 +8,8 @@ typedef struct MIPS
 {
   int instruction;
   int destination;
-  int operand_one;
-  int operand_two;
+  int operandOne;
+  int operandTwo;
   struct MIPS *next;
 } MIPS;
 
@@ -26,5 +26,5 @@ extern MIPS* new_mips();
 extern char *get_instruction(int instruction);
 extern MIPS *create_mips_instruction(int x, int y, int z, int a);
 extern MIPS *getProgramHead();
-extern void newMIPSBlock();
+extern MIPS_BLOCK *newMIPSBlock();
 extern void add_MIPS_to_list(MIPS *head, MIPS *tail);

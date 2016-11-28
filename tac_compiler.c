@@ -151,17 +151,17 @@ LOCATION *next_reg()
 void compile_math(NODE *tree)
 {
   compile_tree(tree->left);
-  LOCATION *operand_one_location = getLastInstructionDestination();
+  LOCATION *operandOne_location = getLastInstructionDestination();
   
   compile_tree(tree->right);
-  LOCATION *operand_two_location = getLastInstructionDestination();
+  LOCATION *operandTwo_location = getLastInstructionDestination();
 
   TAC *operation = newTac();
   operation->destination = next_reg();
   operation->operation = tree->type;
 
-  operation->operand_one = operand_one_location;
-  operation->operand_two = operand_two_location;
+  operation->operandOne = operandOne_location;
+  operation->operandTwo = operandTwo_location;
 }
 
 void compile_return(NODE *tree)
@@ -172,7 +172,7 @@ void compile_return(NODE *tree)
   TAC *return_tac = newTac();
   return_tac->operation = RETURN;
 
-  return_tac->operand_one = return_location;
+  return_tac->operandOne = return_location;
 }
 
 void compile_leaf(NODE *tree)
@@ -197,12 +197,12 @@ void compile_leaf(NODE *tree)
   TAC *taccode = newTac();
   taccode->destination = next_reg();
   taccode->operation = 'S';
-  taccode->operand_one = loc;
+  taccode->operandOne = loc;
 
   LOCATION *scope = new_location(LOCVALUE);
   scope->value = definedScope;
 
-  taccode->operand_two = scope;
+  taccode->operandTwo = scope;
 }
 
 void compile_declaration(NODE *tree)
@@ -229,7 +229,7 @@ void compile_declaration(NODE *tree)
   taccode->destination = destination;
   taccode->operation = 'S';
 
-  taccode->operand_one = operation_destination;
+  taccode->operandOne = operation_destination;
 }
 
 void compile_assignment(NODE *tree)
@@ -245,7 +245,7 @@ void compile_assignment(NODE *tree)
     TAC *taccode = newTac();
     taccode->destination = destination;
     taccode->operation = 'S';
-    taccode->operand_one = operand;
+    taccode->operandOne = operand;
   } else {
     LOCATION *destination = new_location(LOCTOKEN);
     destination->token = (TOKEN*)tree->left->left;
@@ -255,7 +255,7 @@ void compile_assignment(NODE *tree)
     TAC *taccode = newTac();
     taccode->destination = destination;
     taccode->operation = 'S';
-    taccode->operand_one = operation_destination;
+    taccode->operandOne = operation_destination;
   }
 }
 
@@ -266,10 +266,10 @@ void compile_conditional(NODE *tree)
 
   TAC *if_statement = newTac();
   if_statement->operation = IF_NOT;
-  if_statement->operand_one = condition_destination;
+  if_statement->operandOne = condition_destination;
   LOCATION *label = new_location(LABEL);
   label->value = get_label();
-  if_statement->operand_two = label;
+  if_statement->operandTwo = label;
 
   newBlock();
 
@@ -290,7 +290,7 @@ void compile_conditional(NODE *tree)
   jump_to_end->operation = JUMP;
   LOCATION *end_label = new_location(LABEL);
   end_label->value = get_label();
-  jump_to_end->operand_one = end_label;
+  jump_to_end->operandOne = end_label;
 
   newBlock();
 
@@ -313,7 +313,7 @@ void compile_while(NODE *tree)
   jump_to_end->operation = JUMP;
   LOCATION *end_label = new_location(LABEL);
   end_label->value = get_label();
-  jump_to_end->operand_one = end_label;
+  jump_to_end->operandOne = end_label;
 
   newBlock();
 
@@ -339,8 +339,8 @@ void compile_while(NODE *tree)
   TAC *if_statement = newTac();
   if_statement->operation = IF;
 
-  if_statement->operand_one = condition_destination;
-  if_statement->operand_two = start_label;
+  if_statement->operandOne = condition_destination;
+  if_statement->operandTwo = start_label;
 
   newBlock();
 
@@ -420,7 +420,7 @@ void compile_funcion_def(NODE *tree)
   define_closure->operation = CREATE_CLOSURE;
   LOCATION *func_name = new_location(LOCCLOSURE);
   func_name->value = functionName;
-  define_closure->operand_one = func_name;
+  define_closure->operandOne = func_name;
 
   addFunctionBlock(functionName);
 
@@ -435,7 +435,7 @@ void compile_funcion_def(NODE *tree)
   function->operation = FUNCTION_DEF;
   LOCATION *location = new_location(LOCCLOSURE);
   location->value = functionName;
-  function->operand_one = location;
+  function->operandOne = location;
 
   TAC *frame = newTac();
 
@@ -461,8 +461,8 @@ void compile_funcion_def(NODE *tree)
 
   frame->operation = NEWFRAME;
   frame->destination = loc_args;
-  frame->operand_one = loc_local;
-  frame->operand_two = loc_temp;
+  frame->operandOne = loc_local;
+  frame->operandTwo = loc_temp;
 
   //If the last command in the body isnt a RETURN add one
   int last_tac_op = getLastInstructionOperation();
@@ -527,14 +527,14 @@ void store_paraments(NODE *tree)
   parameter_setup->operation = PARAMETER_ALLOCATE;
   LOCATION *param_count = new_location(LOCVALUE);
   param_count->value = parameter_count;
-  parameter_setup->operand_one = param_count;
+  parameter_setup->operandOne = param_count;
 
   int i;
   for (i = 0; i < parameter_count; i++)
   {
     TAC *save_param = newTac();
     save_param->operation = SAVE_PARAM;
-    save_param->operand_one = parameter_location[i];
+    save_param->operandOne = parameter_location[i];
   }
 }
 
@@ -566,9 +566,9 @@ void compile_apply(NODE *tree)
     LOCATION *scope = new_location(LOCVALUE);
     scope->value = whereIsTokenDefined(functionToken);
 
-    jump_to_func->operand_two = scope;
+    jump_to_func->operandTwo = scope;
 
-    jump_to_func->operand_one = func_loc;
+    jump_to_func->operandOne = func_loc;
     LOCATION *return_reg = new_location(LOCREG);
     return_reg->reg = RETURN_REG;
     jump_to_func->destination = return_reg;
@@ -576,7 +576,7 @@ void compile_apply(NODE *tree)
     TAC *save_return = newTac();
     save_return->operation = 'S';
     save_return->destination = next_reg();
-    save_return->operand_one = return_reg;
+    save_return->operandOne = return_reg;
   } else {
     compile_tree(tree->left);
     LOCATION *function_location = getLastInstructionDestination();
@@ -588,8 +588,8 @@ void compile_apply(NODE *tree)
 
     TAC *jump_to_func = newTac();
     jump_to_func->operation = JUMPTOFUNC;
-    jump_to_func->operand_one = function_location;
-    jump_to_func->operand_two = scope;
+    jump_to_func->operandOne = function_location;
+    jump_to_func->operandTwo = scope;
 
     newBlock();
 
@@ -600,7 +600,7 @@ void compile_apply(NODE *tree)
     TAC *save_return = newTac();
     save_return->operation = 'S';
     save_return->destination = next_reg();
-    save_return->operand_one = return_reg;
+    save_return->operandOne = return_reg;
   }
 }
 

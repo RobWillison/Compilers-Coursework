@@ -124,23 +124,23 @@ NEXT_USE_INFO *computeNextUseInfoTac(TAC *tac)
   switch (tac->operation) {
     case 'S':
       addNextUseInfo(tac->destination, 0, tac);
-      addNextUseInfo(tac->operand_one, 1, tac);
+      addNextUseInfo(tac->operandOne, 1, tac);
       break;
     case '+':
     case '-':
     case '*':
     case '/':
       addNextUseInfo(tac->destination, 0, tac);
-      addNextUseInfo(tac->operand_one, 1, tac);
-      addNextUseInfo(tac->operand_two, 1, tac);
+      addNextUseInfo(tac->operandOne, 1, tac);
+      addNextUseInfo(tac->operandTwo, 1, tac);
     case RETURN:
-      addNextUseInfo(tac->operand_one, 1, tac);
+      addNextUseInfo(tac->operandOne, 1, tac);
     case JUMPTOFUNC:
-      addNextUseInfo(tac->operand_one, 1, tac);
+      addNextUseInfo(tac->operandOne, 1, tac);
     case SAVE_PARAM:
-      addNextUseInfo(tac->operand_one, 1, tac);
+      addNextUseInfo(tac->operandOne, 1, tac);
     case IF_NOT:
-      addNextUseInfo(tac->operand_one, 1, tac);
+      addNextUseInfo(tac->operandOne, 1, tac);
   }
 }
 

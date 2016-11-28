@@ -60,8 +60,8 @@ int compareTacExp(TAC *tac1, TAC *tac2)
 {
   if (tac1->operation != tac2->operation) return 0;
 
-  if (!compareLocation(tac1->operand_one, tac2->operand_one)) return 0;
-  if (!compareLocation(tac1->operand_two, tac2->operand_two)) return 0;
+  if (!compareLocation(tac1->operandOne, tac2->operandOne)) return 0;
+  if (!compareLocation(tac1->operandTwo, tac2->operandTwo)) return 0;
 
   return 1;
 }
@@ -69,8 +69,8 @@ int compareTacExp(TAC *tac1, TAC *tac2)
 int constantFolding(TAC *tac)
 {
 
-  LOCATION *operandOne = tac->operand_one;
-  LOCATION *operandTwo = tac->operand_two;
+  LOCATION *operandOne = tac->operandOne;
+  LOCATION *operandTwo = tac->operandTwo;
 
   if (!(operandOne && operandTwo)) return 0;
 
@@ -87,27 +87,27 @@ int constantFolding(TAC *tac)
 
   switch (tac->operation) {
     case '+':
-      tac->operand_one = newLocation;
+      tac->operandOne = newLocation;
       newToken->value = operandOneTok->value + operandTwoTok->value;
       break;
     case '-':
-      tac->operand_one = newLocation;
+      tac->operandOne = newLocation;
       newToken->value = operandOneTok->value - operandTwoTok->value;
       break;
     case '/':
-      tac->operand_one = newLocation;
+      tac->operandOne = newLocation;
       newToken->value = operandOneTok->value / operandTwoTok->value;
       break;
     case '*':
-      tac->operand_one = newLocation;
+      tac->operandOne = newLocation;
       newToken->value = operandOneTok->value * operandTwoTok->value;
       break;
     case '>':
-      tac->operand_one = newLocation;
+      tac->operandOne = newLocation;
       newToken->value = operandOneTok->value > operandTwoTok->value;
       break;
     case '<':
-      tac->operand_one = newLocation;
+      tac->operandOne = newLocation;
       newToken->value = operandOneTok->value < operandTwoTok->value;
       break;
     default:
@@ -115,7 +115,7 @@ int constantFolding(TAC *tac)
   }
 
   tac->operation = 'S';
-  tac->operand_two = 0;
+  tac->operandTwo = 0;
 
   return 1;
 }
@@ -126,14 +126,14 @@ int copyProporgation(TAC *tac)
   int changed = 0;
   if (tac->operation != 'S') return 0;
 
-  if (tac->operand_two && ((LOCATION*)tac->operand_two)->value != 0) return 0;
+  if (tac->operandTwo && ((LOCATION*)tac->operandTwo)->value != 0) return 0;
 
   TAC *pointer = tac;
   pointer = pointer->next;
   if (!pointer) return 0;
 
-  while (pointer && !compareLocation(pointer->destination, tac->operand_one)
-            && !(pointer->operation == PARAMETER_ALLOCATE && ((LOCATION*)tac->operand_one)->reg == RETURN_REG))
+  while (pointer && !compareLocation(pointer->destination, tac->operandOne)
+            && !(pointer->operation == PARAMETER_ALLOCATE && ((LOCATION*)tac->operandOne)->reg == RETURN_REG))
   {
     int validOp = 0;
     switch (pointer->operation)
@@ -158,15 +158,15 @@ int copyProporgation(TAC *tac)
 
     if (!validOp) continue;
 
-    if (compareLocation(pointer->operand_one, tac->destination))
+    if (compareLocation(pointer->operandOne, tac->destination))
     {
-      pointer->operand_one = tac->operand_one;
+      pointer->operandOne = tac->operandOne;
       changed++;
     }
 
-    if (compareLocation(pointer->operand_two, tac->destination))
+    if (compareLocation(pointer->operandTwo, tac->destination))
     {
-      pointer->operand_two = tac->operand_one;
+      pointer->operandTwo = tac->operandOne;
       changed++;
     }
 
@@ -250,9 +250,9 @@ int commonSubExpression(TAC *tac)
     if (compareTacExp(tac, nextTac))
     {
       nextTac->operation = 'S';
-      nextTac->operand_one = tac->destination;
+      nextTac->operandOne = tac->destination;
       LOCATION *definedIn = new_location(LOCVALUE);
-      nextTac->operand_two = definedIn;
+      nextTac->operandTwo = definedIn;
       changed++;
     }
     nextTac = nextTac->next;
@@ -262,8 +262,8 @@ int commonSubExpression(TAC *tac)
 
 int algebraicTransformations(TAC *tac)
 {
-  LOCATION *firstOp = tac->operand_one;
-  LOCATION *secondOp = tac->operand_two;
+  LOCATION *firstOp = tac->operandOne;
+  LOCATION *secondOp = tac->operandTwo;
   //x + 0 -> x
   //x - 0 -> x
   //x * 1 -> x
@@ -279,14 +279,14 @@ int algebraicTransformations(TAC *tac)
     if (firstOp->type == LOCTOKEN && compareTokens(firstOp->token, zeroToken))
     {
       tac->operation = 'S';
-      tac->operand_one = tac->operand_two;
-      tac->operand_two = NULL;
+      tac->operandOne = tac->operandTwo;
+      tac->operandTwo = NULL;
       return 1;
     }
     if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, zeroToken))
     {
       tac->operation = 'S';
-      tac->operand_two = NULL;
+      tac->operandTwo = NULL;
       return 1;
     }
   }
@@ -296,7 +296,7 @@ int algebraicTransformations(TAC *tac)
     if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, zeroToken))
     {
       tac->operation = 'S';
-      tac->operand_two = NULL;
+      tac->operandTwo = NULL;
       return 1;
     }
   }
@@ -306,14 +306,14 @@ int algebraicTransformations(TAC *tac)
     if (firstOp->type == LOCTOKEN && compareTokens(firstOp->token, oneToken))
     {
       tac->operation = 'S';
-      tac->operand_one = tac->operand_two;
-      tac->operand_two = NULL;
+      tac->operandOne = tac->operandTwo;
+      tac->operandTwo = NULL;
       return 1;
     }
     if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, oneToken))
     {
       tac->operation = 'S';
-      tac->operand_two = NULL;
+      tac->operandTwo = NULL;
       return 1;
     }
   }
@@ -323,7 +323,7 @@ int algebraicTransformations(TAC *tac)
     if (secondOp->type == LOCTOKEN && compareTokens(secondOp->token, oneToken))
     {
       tac->operation = 'S';
-      tac->operand_two = NULL;
+      tac->operandTwo = NULL;
       return 1;
     }
   }

@@ -24,8 +24,8 @@ typedef struct TAC
   struct LOCATION *destination;
   int    operation;
   int    label;
-  struct LOCATION *operand_one;
-  struct LOCATION *operand_two;
+  struct LOCATION *operandOne;
+  struct LOCATION *operandTwo;
   struct TAC  *next;
 } TAC;
 

@@ -14,7 +14,7 @@ syscall
 la $t1 function0
 sw $t1 0($v0)
 sw $fp 4($v0)
-sw $v0 12($fp)
+move $t3 $v0
 move $a1 $fp
 jal function0
 lw $t0 4($fp)
@@ -29,23 +29,18 @@ move $fp $v0
 sw $t0 0($fp)
 sw $ra 4($fp)
 sw $a1 8($fp)
-li $t0 0
-sw $t0 12($fp)
-li $t0 4
-sw $t0 16($fp)
-lw $t0 16($fp)
-sw $t0 20($fp)
-li $t0 4
-sw $t0 12($fp)
-lw $t0 20($fp)
-sw $t0 24($fp)
-lw $t0 12($fp)
-sw $t0 28($fp)
-lw $t1 24($fp)
-lw $t2 28($fp)
-add $t0 $t1 $t2
-sw $t0 32($fp)
-lw $v0 32($fp)
+li $t3 4
+move $t4 $t3
+li $t5 1
+move $t6 $t5
+move $t7 $t4
+move $s0 $t6
+move $t1 $t7
+move $t2 $s0
+mult $t1 $t2
+mflo $t0
+move $s1 $t0
+move $v0 $s1
 lw $t0 4($fp)
 lw $fp 0($fp)
 jr $t0
