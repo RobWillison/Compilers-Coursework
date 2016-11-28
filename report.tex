@@ -147,6 +147,8 @@ created before that part of the tree is parsed, also if a goto or label TAC inst
 are created new blocks are created. When a leaf is reached a store instruction is
 created for the value at the leaf.\\~\\
 
+\subsubsection{Enviroment Structure}
+
 In order to keep track of the location of any local variables in the code and enviroment
 is created to store the association between token and register location. The enviroment
 is made up of frames each frame corresponds to a scope in the program and has
@@ -180,7 +182,47 @@ int main()
   \draw[line] (b)-- (e);
 \end{tikzpicture}
 
+As you can see the environment holds the association between the tokens of the variables
+and functions with the TAC register location and the function label respectively.
+
+\subsubsection{TAC Blocking}
+
+The diffrent blocks of TAC code, between labels and jumps, are separated to allow
+easier optimisation and MIPS translation. As the AST is walked if a instruction which
+requires a jump (If, While, Function Call) is found a new block is created and set as the
+current block after the jump. Similarly if a label is created a new block is created
+and the label is assigned to that new block.\\~\\
+in order to compile the code in the same order as the TAC each block has a link to
+the block which was created from the code directly after it. A Simple example is
+given below.\\~\\
+
+\begin{center}
+\begin{tikzpicture}
+  \node[block] (a) {x = 0\\ IF NOT x GOTO 2};
+  \node[block] [yshift=-2cm] (b) {\\ x = 1\\ GOTO 2};
+  \node[block] [yshift=-4cm] (c) {LABEL 2};
+  \draw[line] (a)-- (b);
+  \draw[line] (b)-- (c);
+\end{tikzpicture}
+\end{center}
+
+This was done so that the MIPS compilation step can easily follow the sequence of
+TAC instructions. //TODO write about linking blocks if and when done
+
+\subsubsection{Inner functions}
+
+In order to implement inner functions, functions defined inside another, in TAC
+the code for the function must be flatterned so that there are no functions in functions
+in the TAC. To do this when a function definition is reached inside another the current
+TAC block is stored and another is created for the innerfunction, once the inner function's
+AST has finished being walked the previous block is restored as the current block and
+the AST tree walk continues. This gives the result of placing any inner functions after
+the function it was defined in.
+
+
 \subsection{TAC Optimisation}
+
+
 
 \section{Machine Code Generation}
 
