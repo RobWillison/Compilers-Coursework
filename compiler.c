@@ -83,7 +83,7 @@ int get_register_from_env(LOCATION *location)
 MIPS *loadLocationIntoReg(LOCATION *operand, int reg)
 {
   int oldreg = get_register_from_env(operand);
-  return create_mips_instruction(MOVE, 0, reg, oldreg);
+  return create_mips_instruction(MOVE, reg, oldreg, 0);
 }
 
 int store_value(LOCATION *tac_location)
@@ -124,7 +124,7 @@ MIPS *create_activation_record(TAC *tac_code)
   int tempories = ((LOCATION*)tac_code->operandTwo)->value;
 
   //Move the argument in $ao for a pointer to the args into $t2
-  MIPS *move_arg_pointer = create_mips_instruction(MOVE, 0, 10, 4);
+  MIPS *move_arg_pointer = create_mips_instruction(MOVE, 10, 4, 0);
 
 
   int size = 4; //each arg, local or tempory size i.e. 4 bytes
@@ -140,10 +140,10 @@ MIPS *create_activation_record(TAC *tac_code)
   MIPS *syscall = create_mips_instruction(SYSCALL, 0, 0, 0);
 
   //Move $fp into $t0
-  MIPS *move_fp = create_mips_instruction(MOVE, 0, 8, 30);
+  MIPS *move_fp = create_mips_instruction(MOVE, 8, 30, 0);
 
   //Put $fp in prev and change $fp to the value in $a0
-  MIPS *move_frame_pointer = create_mips_instruction(MOVE, 0, 30, 2);
+  MIPS *move_frame_pointer = create_mips_instruction(MOVE, 30, 2, 0);
 
   //Change prev value to that in $fp
   MIPS *store_instruction = create_mips_instruction(STOREWORD, 30, 0, 8);
@@ -165,7 +165,7 @@ MIPS *create_activation_record(TAC *tac_code)
     MIPS *read_arg = create_mips_instruction(LOADWORD_INS, 9, 10, count * 4);
 
     //save in 3 + i($fp)
-    MIPS *save_arg = create_mips_instruction(MOVE, 0, store_value(tac_code->destination), 9);
+    MIPS *save_arg = create_mips_instruction(MOVE, store_value(tac_code->destination), 9, 0);
 
     count++;
     tac_code = tac_code->next;
@@ -195,16 +195,16 @@ MIPS *translate_store(TAC *tac_code)
       load_instruction = create_mips_instruction(LOADIMEDIATE_INS, storeReg, token->value, 0);
     } else {
       //Its a token
-      load_instruction = create_mips_instruction(MOVE, 0, storeReg, envLocation->reg);
+      load_instruction = create_mips_instruction(MOVE, storeReg, envLocation->reg, 0);
     }
   } else if (operand->type == LOCREG){
     //If its in a register location
     LOCATION *location = operand;
     if (location->reg == RETURN_REG)
     {
-      load_instruction = create_mips_instruction(MOVE, 0, storeReg, 2);
+      load_instruction = create_mips_instruction(MOVE, storeReg, 2, 0);
     } else {
-      load_instruction = create_mips_instruction(MOVE, 0, storeReg, envLocation->reg);
+      load_instruction = create_mips_instruction(MOVE, storeReg, envLocation->reg, 0);
     }
   } else if (operand->type == LOCVALUE){
     LOCATION *location = tac_code->operandOne;
@@ -237,9 +237,9 @@ MIPS *translate_math(TAC *tac_code)
   }
 
   if (allreadyStored != -1) {
-    store_instruction = create_mips_instruction(MOVE, 0, allreadyStored, math_instruction->destination);
+    store_instruction = create_mips_instruction(MOVE, allreadyStored, math_instruction->destination, 0);
   } else {
-    store_instruction = create_mips_instruction(MOVE, 0, store_value(tac_code->destination), math_instruction->destination);
+    store_instruction = create_mips_instruction(MOVE, store_value(tac_code->destination), math_instruction->destination, 0);
   }
 
   return load_operandOne;
@@ -269,7 +269,7 @@ MIPS *translate_equality_check(TAC *tac_code)
   }
 
   //Save the result
-  MIPS *store_instruction = create_mips_instruction(MOVE, 0, store_value(tac_code->destination), destinationReg);
+  MIPS *store_instruction = create_mips_instruction(MOVE, store_value(tac_code->destination), destinationReg, 0);
 
 
   return load_operandOne;
@@ -293,7 +293,7 @@ MIPS *translate_logic(TAC *tac_code)
   }
 
   //Save the result
-  MIPS *store_instruction = create_mips_instruction(MOVE, 0, store_value(tac_code->destination), less_than->destination);
+  MIPS *store_instruction = create_mips_instruction(MOVE, store_value(tac_code->destination), less_than->destination, 0);
 
   if (tac_code->operation == GE_OP || tac_code->operation == LE_OP)
   {
@@ -306,7 +306,7 @@ MIPS *translate_logic(TAC *tac_code)
     MIPS *or = create_mips_instruction(OR_INS, 8, store_instruction->destination, equality->destination);
 
     //Save the result
-    MIPS *eq_store_instruction = create_mips_instruction(MOVE, 0, store_value(tac_code->destination), or->destination);
+    MIPS *eq_store_instruction = create_mips_instruction(MOVE, store_value(tac_code->destination), or->destination, 0);
 
     return load_operandOne;
   }
@@ -342,10 +342,10 @@ MIPS *translate_return(TAC *tac_code)
 MIPS *translate_conditional(TAC *tac_code)
 {
   //Load two operands into registers
-  MIPS *load_operand = create_mips_instruction(MOVE, 0, 10, get_register_from_env(tac_code->operandOne));
+  MIPS *load_operand = create_mips_instruction(MOVE, 10, get_register_from_env(tac_code->operandOne), 0);
 
   LOCATION *label = tac_code->operandTwo;
-  MIPS *branch_instruction = create_mips_instruction(BRANCH_NEQ_INS, label->value, load_operand->destination, 0);
+  MIPS *branch_instruction = create_mips_instruction(BRANCH_NEQ_INS, label->value, load_operand->operandOne, 0);
 
   if (tac_code->operation == IF_NOT) {
     branch_instruction->instruction = BRANCH_EQ_INS;
@@ -392,7 +392,7 @@ MIPS *translate_jump_to_func(TAC *tac_code)
 
   MIPS_LOCATION *closure = get_location_from_env(closure_location);
 
-  closure_object = create_mips_instruction(MOVE, 0, 8, closure->reg);
+  closure_object = create_mips_instruction(MOVE, 8, closure->reg, 0);
 
   //Load closure address into $t0
   MIPS *closure_address = create_mips_instruction(LOADWORD_INS, 9, 8, 0);
@@ -417,7 +417,7 @@ MIPS *allocate_space_for_params(TAC *tac_code)
 
   MIPS *syscall = create_mips_instruction(SYSCALL, 0, 0, 0);
 
-  MIPS *save_pointer_arguemnt = create_mips_instruction(MOVE, 0, 4, 2);
+  MIPS *save_pointer_arguemnt = create_mips_instruction(MOVE, 4, 2, 0);
 
   return bytes;
 }
@@ -457,7 +457,7 @@ MIPS *create_closure(TAC *tac_code)
   MIPS *store_fp = create_mips_instruction(STOREWORD, 2, 4, 30);
   //Store pointer to object in current frame pointer
   int location = store_value(tac_code->operandOne);
-  MIPS *store_pointer = create_mips_instruction(MOVE, 0, location, 2);
+  MIPS *store_pointer = create_mips_instruction(MOVE, location, 2, 0);
 
   return bytes;
 }
@@ -551,7 +551,7 @@ MIPS *create_mips_code(TAC_BLOCK *tac_block)
 
   MIPS *syscall = create_mips_instruction(SYSCALL, 0, 0, 0);
 
-  MIPS *move_frame_pointer = create_mips_instruction(MOVE, 0, 30, 2);
+  MIPS *move_frame_pointer = create_mips_instruction(MOVE, 30, 2, 0);
 
   //Store the $ra in the 2nd place in the frame
   MIPS *save_return = create_mips_instruction(STOREWORD, 30, 4, 31);
@@ -573,7 +573,7 @@ MIPS *create_mips_code(TAC_BLOCK *tac_block)
   int main_name = 0;
 
   //Store global scope in $a1
-  MIPS *store_global_fp = create_mips_instruction(MOVE, 0, 5, 30);
+  MIPS *store_global_fp = create_mips_instruction(MOVE, 5, 30, 0);
 
   MIPS *jump_instruction = create_mips_instruction(JUMPTOFUNC, 0, main_name, 0);
 

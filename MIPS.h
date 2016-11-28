@@ -13,10 +13,21 @@ typedef struct MIPS
   struct MIPS *next;
 } MIPS;
 
+typedef struct SPACE
+{
+  int tempReg;
+  int reg;
+  int type;
+  int memory_location;
+  struct SPACE *next;
+} SPACE;
+
+
 typedef struct MIPS_BLOCK
 {
   struct MIPS *instructions;
   struct MIPS_BLOCK *next;
+  struct SPACE *space;
 } MIPS_BLOCK;
 
 extern const char* registers[];

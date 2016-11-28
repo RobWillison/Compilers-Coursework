@@ -7,29 +7,43 @@
 #include "assignReg.h"
 
 int registerList[] = {11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};
-REG_USE *usedReg = NULL;
 
-int findReg(int tempReg)
+SPACE *getAllocatedSpace(int tempReg, MIPS_BLOCK *block)
 {
-  int used = getAllocatedRegister(tempReg);
-  if (used != -1) return used;
-  return getFreeRegister(tempReg);
+  if (!block->space) return NULL;
+
+  SPACE *pointer = block->space;
+  while (pointer)
+  {
+    if (pointer->tempReg == tempReg) return pointer;
+    pointer = pointer->next;
+  }
+  return NULL;
 }
 
-int getFreeRegister(int tempReg)
+SPACE *moveToMemory(int temp, MIPS_BLOCK *block)
+{
+  SPACE *space = getAllocatedSpace(temp);
+  space->type == MEMORY;
+  space->memory_location = getFreeMemoy();
+}
+
+SPACE *getFreeRegister(int tempReg, MIPS_BLOCK *block)
 {
 
-  REG_USE *newRegUse = (REG_USE*)malloc(sizeof(REG_USE));
+  SPACE *newRegUse = (SPACE*)malloc(sizeof(SPACE));
   newRegUse->tempReg = tempReg;
+  newRegUse->type = REGISTER;
+  newRegUse->next = NULL;
   int reg = 0;
-  if (!usedReg)
+  if (!block->space)
   {
     newRegUse->reg = registerList[reg];
-    usedReg = newRegUse;
-    return registerList[reg];
+    block->space = newRegUse;
+    return newRegUse;
   }
 
-  REG_USE *pointer = usedReg;
+  SPACE *pointer = block->space;
   while (pointer->next)
   {
     pointer = pointer->next;
@@ -38,20 +52,47 @@ int getFreeRegister(int tempReg)
 
   newRegUse->reg = registerList[reg];
   pointer->next = newRegUse;
-  return registerList[reg];
+  return newRegUse;
 }
 
-int getAllocatedRegister(int tempReg)
+int getFreeMemory(MIPS_BLOCK *block)
 {
-  if (!usedReg) return -1;
+  int memory = 12;
+  if (!block->space) return memory;
 
-  REG_USE *pointer = usedReg;
-  while (pointer)
+  SPACE *pointer = block->space;
+  while (pointer->next)
   {
-    if (pointer->tempReg == tempReg) return pointer->reg;
     pointer = pointer->next;
+    memory = memory + 4;
   }
-  return -1;
+
+  return memory;
+}
+
+SPACE *findSpace(int tempReg, MIPS_BLOCK *block)
+{
+  SPACE *used = getAllocatedSpace(tempReg, block);
+  if (used) return used;
+  return getFreeRegister(tempReg, block);
+}
+
+void endBlockSave(MIPS_BLOCK *block)
+{
+  SPACE *space = block->space;
+  SPACE *start = space;
+  while (space->next) space = space->next;
+
+  SPACE *end = space;
+
+  int cont = 1;
+  while (cont)
+  {
+    SPACE *newSpace = getFreeMemory(start->tempReg, block);
+    create_mips_instruction(STOREWORD, 30, newSpace->memory_location, newSpace->reg);
+    start = start->next;
+    if (start == end) cont = 0;
+  }
 }
 
 void assignBlockReg(MIPS_BLOCK *block)
@@ -65,17 +106,22 @@ void assignBlockReg(MIPS_BLOCK *block)
 
     if (destination >= 100)
     {
-      mips->destination = findReg(destination);
+      SPACE *space = findSpace(destination, block);
+      mips->destination = space->reg;
     }
     if (operandOne >= 100)
     {
-      mips->operandOne = findReg(operandOne);
+      SPACE *space = findSpace(operandOne, block);
+      mips->operandOne = space->reg;
     }
     if (operandTwo >= 100)
     {
-      mips->operandTwo = findReg(operandTwo);
+      SPACE *space = findSpace(operandTwo, block);
+      mips->operandTwo = space->reg;
     }
 
     mips = mips->next;
   }
+
+  endBlockSave(block);
 }

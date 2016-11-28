@@ -257,14 +257,16 @@ void print_mips(MIPS *mips, FILE *file)
       break;
     case '*':
     case '/':
+      fprintf(file, "%s %s %s\n", get_instruction(mips->instruction), registers[mips->operandOne], registers[mips->operandTwo]);
+      break;
     case MOVE:
       if (mips->operandOne >= 100)
       {
-        fprintf(file, "%s %d %s\n", get_instruction(mips->instruction), mips->operandOne, registers[mips->operandTwo]);
+        fprintf(file, "%s %d %s\n", get_instruction(mips->instruction), mips->destination, registers[mips->operandOne]);
       } else if (mips->operandTwo >= 100){
-        fprintf(file, "%s %s %d\n", get_instruction(mips->instruction), registers[mips->operandOne], mips->operandTwo);
+        fprintf(file, "%s %s %d\n", get_instruction(mips->instruction), registers[mips->destination], mips->operandOne);
       } else {
-        fprintf(file, "%s %s %s\n", get_instruction(mips->instruction), registers[mips->operandOne], registers[mips->operandTwo]);
+        fprintf(file, "%s %s %s\n", get_instruction(mips->instruction), registers[mips->destination], registers[mips->operandOne]);
       }
       break;
     case MOVE_LOW_INS:
