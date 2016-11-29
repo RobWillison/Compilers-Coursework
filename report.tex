@@ -148,25 +148,28 @@ IF r7 GOTO 2
 \end{lstlisting}
 
 \subsubsection{List of TAC instuctions}
+\begin{lstlisting}
 x := y                            Store the value of y in x
-x := y + z                        Add the values of y and z and store in x
-x := y - z                        Take y away from z and store in x
-x := y * z                        Multiply y and z and store in x
-x := y / z                        Divide y by z and store in x
-x := y < z                        Set x to 1 if y is smaller than z
-x := y > z                        Set x to 1 if y is larger than z
-x := y >= z                       Set x to 1 if y is larger or equal to z
-x := y <= z                       Set x to 1 if y is smaller or equal to z
+x := y + z                        Store the result of y + z in x
+x := y - z                        Store the result of y - z in x
+x := y * z                        Store the result of y * z in x
+x := y / z                        Store the result of y / z in x
+x := y < z                        Store the result of y < z in x
+x := y > z                        Store the result of y > z in x
+x := y >= z                       SStore the result of y <= z in x
+x := y <= z                       Store the result of y >= z in x
 LABEL x:                          Create a label with the name x
 GOTO x                            jump to the label with name x
 IF NOT x GOTO y                   If x has the value 0 jump to y
-CREATE CLOSURE x                  Create a closure with the code label x
+CREATE CLOSURE x                  define closure with the code label x
 x:                                Also a label of value x
-ALLOCATE PARAMS x                 Allocate a space for x number of parameters
-SAVE PARAM x                      Save the value of x in the next parameter space
+ALLOCATE PARAMS x                 Allocate a space for x parameters
+SAVE PARAM x                      Save x in the next parameter space
 NEW FRAME x arg y loc z temp      Allocate space for the activation frame
-RETURN x                          Return the value in x from the current function
+RETURN x                          Return the value in x
 FUNCTION END                      A tag for the end of the function
+\end{lstlisting}
+
 
 \subsection{TAC Generation}
 
@@ -255,8 +258,8 @@ the function it was defined in.
 As the TAC instructions are broken down into blocks next use informationn can be
 worked out to allow optimisation. The next use info for a block is calculated by
 using a recursive function which looks at each instruction in term from bottom
-to top. A list of NEXT_USE_INFO structures is used, one structure for each variable
-used in the block. Each NEXT_USE_INFO structure contains a list of the uses of that
+to top. A list of NEXT\_USE\_INFO structures is used, one structure for each variable
+used in the block. Each NEXT\_USE\_INFO structure contains a list of the uses of that
 variable and the associated liveness at that point. This is all done in the nextUseInfo.c file.
 
 \subsection{TAC Optimisation}
@@ -604,6 +607,153 @@ jal $t1             The code is jumped to
 \end{lstlisting}
 
 \section{Testing}
+
+\subsection{Interpretation}
+The interpreter was run with various test cases, the results from some of these
+cases are shown below along with the result returned from the interpreter.
+
+\subsubsection{Math Test - test\_math.c}
+\begin{lstlisting}
+int main()
+{
+    return 8 * 2 - 2;
+}
+\end{lstlisting}
+RESULT - 14
+
+\subsubsection{Simple Test - test\_simple.c}
+\begin{lstlisting}
+int main()
+{
+    int y;
+    int x = 4;
+    y = 4;
+    return x + y;
+}
+\end{lstlisting}
+RESULT - 8
+
+\subsubsection{If Else Test - test\_if\_else.c}
+\begin{lstlisting}
+int main()
+{
+    if (1 > 4) {
+      return 4;
+    } else if (2 > 1) {
+      return 3;
+    }
+
+    return 8;
+}
+\end{lstlisting}
+RESULT - 3
+
+\subsubsection{While Test - test\_while.c}
+\begin{lstlisting}
+int main()
+{
+    int x = 0;
+    while (x < 5)
+    {
+      x = x + 1;
+    }
+
+    return x;
+}
+\end{lstlisting}
+RESULT - 5
+
+\subsubsection{Function Test - test\_function.c}
+\begin{lstlisting}
+int test()
+{
+  return 4;
+}
+
+int main()
+{
+  return test();
+}
+\end{lstlisting}
+RESULT - 4
+
+\subsubsection{Function With Arguments Test - test\_function\_args.c}
+\begin{lstlisting}
+int times(int n, int d)
+{
+  return n * d;
+}
+
+int main()
+{
+  return times(3, 2);
+}
+\end{lstlisting}
+RESULT - 6
+
+\subsubsection{Inner Function Test - test\_innerfunc.c}
+\begin{lstlisting}
+int times2(int n) {
+  int times(int n, int m) {
+    return n * m;
+  }
+  return times(n, 2);
+}
+
+int main()
+{
+  return times2(3);
+}
+\end{lstlisting}
+RESULT - 6
+
+\subsubsection{Twice Test - test\_twice.c}
+\begin{lstlisting}
+function twice(function f) {
+  int g(int x) { return f(f(x)); }
+  return g;
+}
+
+void main()
+{
+  int addten(int n) {return n + 10;}
+  return twice(addten)(2);
+}
+\end{lstlisting}
+RESULT - 22
+
+\subsubsection{Cplus Test - test\_cplus.c}
+\begin{lstlisting}
+function cplus(int a) {
+  int cplusa(int b) { return a+b; }
+  return cplusa;
+}
+
+int main()
+{
+  return cplus(5)(2);
+}
+\end{lstlisting}
+RESULT - 7
+
+\subsubsection{Factorial Test - test\_fact.c}
+\begin{lstlisting}
+int fact(int n) {
+    int inner_fact(int n, int a) {
+      if (n==0) return a;
+        return inner_fact(n-1,a*n);
+      }
+    return inner_fact(n,1);
+}
+
+
+int main()
+{
+  return fact(4);
+}
+\end{lstlisting}
+RESULT - 24
+
 
 \subsection{Compiler}
 In order to test both the TAC and MIPS compilation stages various --C programs
