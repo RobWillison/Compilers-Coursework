@@ -8,8 +8,8 @@ typedef struct MIPS
 {
   int instruction;
   int destination;
-  int operand_one;
-  int operand_two;
+  int operandOne;
+  int operandTwo;
   struct MIPS *next;
 } MIPS;
 

@@ -114,13 +114,13 @@ MIPS *new_mips()
   return ins;
 }
 
-MIPS *create_mips_instruction(int type, int destination, int operand_one, int operand_two)
+MIPS *create_mips_instruction(int type, int destination, int operandOne, int operandTwo)
 {
   MIPS *instruction = new_mips();
   if (type) instruction->instruction = type;
   if (destination) instruction->destination = destination;
-  if (operand_one) instruction->operand_one = operand_one;
-  if (operand_two) instruction->operand_two = operand_two;
+  if (operandOne) instruction->operandOne = operandOne;
+  if (operandTwo) instruction->operandTwo = operandTwo;
 
   return instruction;
 }

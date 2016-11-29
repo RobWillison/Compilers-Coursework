@@ -14,9 +14,19 @@
 \maketitle
 \tableofcontents
 
-\section{Introduction}
-This report is an explanation of the design decisions undertaked while writing
-a --C compiler and interpreter.
+\section{Overview}
+This report is an explanation of the design decisions undertaken while writing
+a --C compiler and interpreter. The project was writtern in C and involves three
+different sections of code, an interpreter, TAC compiler and MIPS compiler.\\~\\
+\\Todo bit on interpreter
+The TAC Compiler performs a walk over the AST at each node a section of TAC is created.
+The TAC is separated into blocks between each label and jump, this allows next use
+information to be generated in order for easy TAC optimisation.\\~\\
+For the MIPS the problem of delayed branching was ignored to simplify the compiler
+and due to time constraints I didn't get round to adding the required nops into the
+compiler.
+
+
 \newpage
 \section{Code Interpretation}
 
@@ -219,6 +229,8 @@ AST has finished being walked the previous block is restored as the current bloc
 the AST tree walk continues. This gives the result of placing any inner functions after
 the function it was defined in.
 
+\subsection{Next Use Info}
+
 \subsection{TAC Optimisation}
 
 After the TAC generation phase has been completed the sequence of blocks is handed
@@ -353,6 +365,11 @@ RETURN 10
 \end{lstlisting}
 \end{minipage}%
 
+The function which completed the dead code elimination step does not recalculate
+the number of tempories in the code. So when the activation record is allocated
+it will be for the original number of registers, which can waste a lot of memory.
+This would be easy to recompute but I ran out of time.
+
 \subsubsection{Common Sub Expression Elimination}
 If two expression have the same operands and operation the later one can be replaced
 with a store of the destination of the first. These are found by looking for pairs
@@ -443,8 +460,1365 @@ RETURN result
 \end{lstlisting}
 \end{minipage}%
 
-
-
 \section{Machine Code Generation}
+
+After the TAC cEnvironmenten generated and optimised the code is translated to MIPS
+assembler. This is done block by block in the order the TAC was generated.
+Before the user code is compiled a global MIPS block is added which allocates memory
+for global scope functions and sets up the environment used for variable lookup.\\
+A decision was made to store all variables in memory and ignore the problem of register
+assignment, this makes the compiler simpler however reduces its performance. The files
+associated with this section of the compiler are compiler.c and MIPS.c.
+
+\subsubsection{Functions}
+When a function is compiled the first thing that happens is the number of locals,
+temporaries and arguments are counted and a space big enough for all these is allocated.
+This activation frame also contains space for the return address, previous frame
+and enclosing frame. These are structured as shown in the diagram below.
+
+//TODO draw diagram
+
+One this is created and the first 3 spaces filled the arguments are all loaded
+into the next spaces in the frame. Any arguments are loaded from the memory pointed
+by \$a0. The function code is then compiled. The final
+section of the code is to return to the calling code, any result is moved to \$v0
+the previous frame is restored into the \$fp and the return address jumped to.\\
+Below is a simple function example in mips with annotations.
+
+\begin{minipage}{0.4\textwidth}
+\begin{lstlisting}
+
+int times(int n, int d)
+{
+  return n * d;
+}
+
+\end{lstlisting}
+\end{minipage}%
+\begin{minipage}{0.6\textwidth}
+\begin{lstlisting}
+function1:      (1)
+move $t2 $a0    (2)
+li $a0 40       (3)
+li $v0 9        (4)
+syscall         (6)
+move $t0 $fp    (5)
+move $fp $v0    (6)
+sw $t0 0($fp)   (7)
+sw $ra 4($fp)   (8)
+sw $a1 8($fp)   (9)
+lw $t1 0($t2)   (10)
+sw $t1 12($fp)
+lw $t1 4($t2)
+sw $t1 16($fp)
+lw $t1 12($fp)  (11)
+lw $t2 16($fp)
+mult $t1 $t2
+mflo $t0
+sw $t0 20($fp)
+lw $v0 20($fp)  (12)
+lw $t0 4($fp)   (13)
+lw $fp 0($fp)   (14)
+jr $t0          (15)
+\end{lstlisting}
+\end{minipage}%
+
+\begin{enumerate}
+\item Function label
+\item Move argument pointer into tempory register
+\item set the number of bytes required to allocate
+\item set the syscode for memory allocation
+\item Move the old frame pointer into a temporary register
+\item Save the new frame pointer
+\item Put the previous frame pointer in the frame
+\item Put the return adderess in the frame
+\item The enclosing scope is passed in \$a1 so store this in the frame
+\item for both arguments load them from the arg pointer and store in the frame
+\item Do the function body
+\item store the return value in \$v0
+\item load the return address
+\item restore the previous frame pointer
+\item jump to the return address
+\end{enumerate}
+
+\subsubsection{Enviroment}
+In order for the location of tokens and TAC registers to be found they are stored
+in an environment. The environment is made up of several frames each of which store
+information about a different scope in the program. Each frame holds the association
+between either TAC registers or tokens and there memory locations which are defined
+in that scope.
+
+\subsubsection{Closures}
+
+In order to have closures we need to define the pair of program code and environment.
+The structure for a closure in MIPS is using a 8 byte object the first word is
+the address of the function code and the second if the address where the frame
+the closure was defined in is stored. When a closure is called the enclosing frame is
+placed in \$a1 and the program code is jumped to. Below is an example of the definition
+of a closure.
+
+\begin{lstlisting}
+li $a0 8            Allocate 2 Words
+li $v0 9
+syscall
+la $t1 function0    Load the address of the code
+sw $t1 0($v0)       Save the address in the first place
+sw $fp 4($v0)       Save the current frame pointer in the other
+\end{lstlisting}
+
+Then when the closure is called the following code is generated.
+
+\begin{lstlisting}
+lw $t0 16($fp)      The closure object is loaded
+lw $t1 0($t0)       The code address is loaded
+lw $a1 4($t0)       The enclosing frame is loaded into $a0
+jal $t1             The code is jumped to
+\end{lstlisting}
+
+\section{Testing}
+
+\subsection{Compiler}
+In order to test both the TAC and MIPS compilation stages various --C programs
+were run though the compiler and the result they leave in the return register
+was checked with the expected value. In order to make this simpler a new
+exception handler was writtern for the spim interpreter which prints the value
+left in \$v0 after the user code is run. The compilation is done by using
+``./mycc -c FileName" and then running it in spim using ``spim -exception\_file testExceptionHandler.s -file Output/test.asm".
+Given this here are a few example test cases there TAC and MIPS code and result
+value.
+
+\subsubsection{Math Test - test\_math.c}
+\begin{lstlisting}
+int main()
+{
+    return 8 * 2 - 2;
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _0
+_0:
+NEW FRAME 0 arg 0 loc 5 temp
+RETURN 14
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 32
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $v0 14
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 14
+
+\subsubsection{Simple Test - test\_simple.c}
+\begin{lstlisting}
+int main()
+{
+    int y;
+    int x = 4;
+    y = 4;
+    return x + y;
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _0
+_0:
+NEW FRAME 0 arg 3 loc 4 temp
+RETURN 8
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 40
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $v0 8
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 8
+
+\subsubsection{If Else Test - test\_if\_else.c}
+\begin{lstlisting}
+int main()
+{
+    if (1 > 4) {
+      return 4;
+    } else if (2 > 1) {
+      return 3;
+    }
+
+    return 8;
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _0
+_0:
+NEW FRAME 0 arg 0 loc 9 temp
+r3 := 0
+IF NOT r3 GOTO 1
+RETURN 4
+GOTO 2
+LABEL 1: r7 := 1
+IF NOT r7 GOTO 3
+RETURN 3
+LABEL 3: LABEL 2: RETURN 8
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 48
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $t0 0
+sw $t0 12($fp)
+lw $t2 12($fp)
+beq $t2 $zero label1
+li $v0 4
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+j label2
+label1:
+li $t0 1
+sw $t0 16($fp)
+lw $t2 16($fp)
+beq $t2 $zero label3
+li $v0 3
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+label3:
+label2:
+li $v0 8
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 3
+
+\subsubsection{While Test - test\_while.c}
+\begin{lstlisting}
+int main()
+{
+    int x = 0;
+    while (x < 5)
+    {
+      x = x + 1;
+    }
+
+    return x;
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _0
+_0:
+NEW FRAME 0 arg 2 loc 8 temp
+x := 0
+GOTO 1
+LABEL 2: r4 := x + 1
+x := r4
+LABEL 1: r7 := x < 5
+IF r7 GOTO 2
+RETURN x
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 52
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $t0 0
+sw $t0 12($fp)
+j label1
+label2:
+lw $t1 12($fp)
+li $t2 1
+add $t0 $t1 $t2
+sw $t0 16($fp)
+lw $t0 16($fp)
+sw $t0 12($fp)
+label1:
+lw $t1 12($fp)
+li $t2 5
+sltu $t0 $t1 $t2
+sw $t0 20($fp)
+lw $t2 20($fp)
+bne $t2 $zero label2
+lw $v0 12($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 5
+
+\subsubsection{Function Test - test\_function.c}
+\begin{lstlisting}
+int test()
+{
+  return 4;
+}
+
+int main()
+{
+  return test();
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _1
+DEFINE CLOSURE _0
+_1:
+NEW FRAME 0 arg 0 loc 1 temp
+RETURN 4
+FUNCTION END
+_0:
+NEW FRAME 0 arg 0 loc 2 temp
+ALLOCATE PARAMS 0
+CALL _1 FROM SCOPE 1
+RETURN result
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 20
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function1
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 16($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function1:
+move $t2 $a0
+li $a0 16
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $v0 4
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 20
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $a0 0
+li $v0 9
+syscall
+move $a0 $v0
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 4
+
+\subsubsection{Function With Arguments Test - test\_function\_args.c}
+\begin{lstlisting}
+int times(int n, int d)
+{
+  return n * d;
+}
+
+int main()
+{
+  return times(3, 2);
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _1
+DEFINE CLOSURE _0
+_1:
+NEW FRAME 2 arg 2 loc 3 temp
+LOAD PARAM n
+LOAD PARAM d
+r3 := n * d
+RETURN r3
+FUNCTION END
+_0:
+NEW FRAME 0 arg 0 loc 4 temp
+r4 := 3
+r5 := 2
+ALLOCATE PARAMS 2
+SAVE PARAM r4
+SAVE PARAM r5
+CALL _1 FROM SCOPE 1
+RETURN result
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 20
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function1
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 16($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function1:
+move $t2 $a0
+li $a0 40
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+lw $t1 4($t2)
+sw $t1 16($fp)
+lw $t1 12($fp)
+lw $t2 16($fp)
+mult $t1 $t2
+mflo $t0
+sw $t0 20($fp)
+lw $v0 20($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 28
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $t0 3
+sw $t0 12($fp)
+li $t0 2
+sw $t0 16($fp)
+li $a0 8
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 12($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 16($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 6
+
+\subsubsection{Inner Function Test - test\_innerfunc.c}
+\begin{lstlisting}
+int times2(int n) {
+  int times(int n, int m) {
+    return n * m;
+  }
+  return times(n, 2);
+}
+
+int main()
+{
+  return times2(3);
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _1
+_1:
+NEW FRAME 1 arg 1 loc 4 temp
+LOAD PARAM n
+DEFINE CLOSURE _2
+r4 := n
+r5 := 2
+ALLOCATE PARAMS 2
+SAVE PARAM r4
+SAVE PARAM r5
+CALL _2 FROM SCOPE 0
+RETURN result
+FUNCTION END
+DEFINE CLOSURE _0
+_2:
+NEW FRAME 2 arg 2 loc 3 temp
+LOAD PARAM n
+LOAD PARAM m
+r3 := n * m
+RETURN r3
+FUNCTION END
+_0:
+NEW FRAME 0 arg 0 loc 3 temp
+r7 := 3
+ALLOCATE PARAMS 1
+SAVE PARAM r7
+CALL _1 FROM SCOPE 1
+RETURN result
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function1
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function1:
+move $t2 $a0
+li $a0 36
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function2
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 16($fp)
+lw $t0 12($fp)
+sw $t0 20($fp)
+li $t0 2
+sw $t0 24($fp)
+li $a0 8
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 20($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 24($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 16($fp)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 28($fp)
+function2:
+move $t2 $a0
+li $a0 40
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+lw $t1 4($t2)
+sw $t1 16($fp)
+lw $t1 12($fp)
+lw $t2 16($fp)
+mult $t1 $t2
+mflo $t0
+sw $t0 20($fp)
+lw $v0 20($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 24
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $t0 3
+sw $t0 12($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 12($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 6
+
+\subsubsection{Twice Test - test\_twice.c}
+\begin{lstlisting}
+function twice(function f) {
+  int g(int x) { return f(f(x)); }
+  return g;
+}
+
+void main()
+{
+  int addten(int n) {return n + 10;}
+  return twice(addten)(2);
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _1
+_1:
+NEW FRAME 1 arg 1 loc 1 temp
+LOAD PARAM f
+DEFINE CLOSURE _2
+RETURN 2
+FUNCTION END
+DEFINE CLOSURE _0
+_2:
+NEW FRAME 1 arg 1 loc 5 temp
+LOAD PARAM x
+r1 := x
+ALLOCATE PARAMS 1
+SAVE PARAM r1
+CALL _0 FROM SCOPE 1
+r2 := result
+ALLOCATE PARAMS 1
+SAVE PARAM r2
+CALL _0 FROM SCOPE 1
+RETURN result
+FUNCTION END
+_0:
+NEW FRAME 0 arg 0 loc 6 temp
+DEFINE CLOSURE _3
+r8 := 3
+ALLOCATE PARAMS 1
+SAVE PARAM r8
+CALL _1 FROM SCOPE 1
+r9 := result
+r10 := 2
+ALLOCATE PARAMS 1
+SAVE PARAM r10
+CALL r9 FROM SCOPE 0
+RETURN result
+FUNCTION END
+_3:
+NEW FRAME 1 arg 1 loc 3 temp
+LOAD PARAM n
+r7 := n + 10
+RETURN r7
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function1
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function1:
+move $t2 $a0
+li $a0 24
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function2
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 16($fp)
+lw $v0 16($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 20($fp)
+function2:
+move $t2 $a0
+li $a0 40
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+lw $t0 12($fp)
+sw $t0 16($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 16($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $t0 $v0
+sw $t0 20($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 20($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 36
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function3
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+lw $t0 12($fp)
+sw $t0 16($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 16($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $t0 $v0
+sw $t0 20($fp)
+li $t0 2
+sw $t0 24($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 24($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 20($fp)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function3:
+move $t2 $a0
+li $a0 32
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+lw $t1 12($fp)
+li $t2 10
+add $t0 $t1 $t2
+sw $t0 16($fp)
+lw $v0 16($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 22
+
+\subsubsection{Cplus Test - test\_cplus.c}
+\begin{lstlisting}
+function cplus(int a) {
+  int cplusa(int b) { return a+b; }
+  return cplusa;
+}
+
+int main()
+{
+  return cplus(5)(2);
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _1
+_1:
+NEW FRAME 1 arg 1 loc 1 temp
+LOAD PARAM a
+DEFINE CLOSURE _2
+RETURN 2
+FUNCTION END
+DEFINE CLOSURE _0
+_2:
+NEW FRAME 1 arg 1 loc 3 temp
+LOAD PARAM b
+DEFINED IN 1 r1 := a
+r3 := r1 + b
+RETURN r3
+FUNCTION END
+_0:
+NEW FRAME 0 arg 0 loc 6 temp
+r5 := 5
+ALLOCATE PARAMS 1
+SAVE PARAM r5
+CALL _1 FROM SCOPE 1
+r6 := result
+r7 := 2
+ALLOCATE PARAMS 1
+SAVE PARAM r7
+CALL r6 FROM SCOPE 0
+RETURN result
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function1
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function1:
+move $t2 $a0
+li $a0 24
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function2
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 16($fp)
+lw $v0 16($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 20($fp)
+function2:
+move $t2 $a0
+li $a0 32
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+sw $t0 16($fp)
+lw $t1 16($fp)
+lw $t2 12($fp)
+add $t0 $t1 $t2
+sw $t0 20($fp)
+lw $v0 20($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 36
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $t0 5
+sw $t0 12($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 12($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $t0 $v0
+sw $t0 16($fp)
+li $t0 2
+sw $t0 20($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 20($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 16($fp)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 7
+
+\subsubsection{Factorial Test - test\_fact.c}
+\begin{lstlisting}
+int fact(int n) {
+    int inner_fact(int n, int a) {
+      if (n==0) return a;
+        return inner_fact(n-1,a*n);
+      }
+    return inner_fact(n,1);
+}
+
+
+int main()
+{
+  return fact(4);
+}
+\end{lstlisting}
+\begin{lstlisting}
+DEFINE CLOSURE _1
+_1:
+NEW FRAME 1 arg 1 loc 4 temp
+LOAD PARAM n
+DEFINE CLOSURE _2
+r12 := n
+r13 := 1
+ALLOCATE PARAMS 2
+SAVE PARAM r12
+SAVE PARAM r13
+CALL _2 FROM SCOPE 0
+RETURN result
+FUNCTION END
+DEFINE CLOSURE _0
+_2:
+NEW FRAME 2 arg 2 loc 12 temp
+LOAD PARAM n
+LOAD PARAM a
+r3 := n == 0
+IF NOT r3 GOTO 1
+RETURN a
+LABEL 1: r7 := n - 1
+r10 := a * n
+ALLOCATE PARAMS 2
+SAVE PARAM r7
+SAVE PARAM r10
+CALL _2 FROM SCOPE 1
+RETURN result
+FUNCTION END
+_0:
+NEW FRAME 0 arg 0 loc 3 temp
+r15 := 4
+ALLOCATE PARAMS 1
+SAVE PARAM r15
+CALL _1 FROM SCOPE 1
+RETURN result
+FUNCTION END
+\end{lstlisting}
+\begin{lstlisting}
+main:
+li $a0 16
+li $v0 9
+syscall
+move $fp $v0
+sw $ra 4($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function1
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 12($fp)
+move $a1 $fp
+jal function0
+lw $t0 4($fp)
+jr $t0
+function1:
+move $t2 $a0
+li $a0 36
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+li $a0 8
+li $v0 9
+syscall
+la $t1 function2
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 16($fp)
+lw $t0 12($fp)
+sw $t0 20($fp)
+li $t0 1
+sw $t0 24($fp)
+li $a0 8
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 20($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 24($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 16($fp)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+li $a0 8
+li $v0 9
+syscall
+la $t1 function0
+sw $t1 0($v0)
+sw $fp 4($v0)
+sw $v0 28($fp)
+function2:
+move $t2 $a0
+li $a0 76
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+lw $t1 0($t2)
+sw $t1 12($fp)
+lw $t1 4($t2)
+sw $t1 16($fp)
+lw $t1 12($fp)
+li $t2 0
+sub $t0 $t1 $t2
+sltu $t0 $zero $t0
+xori $t0 $t0 1
+sw $t0 20($fp)
+lw $t2 20($fp)
+beq $t2 $zero label1
+lw $v0 16($fp)
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+label1:
+lw $t1 12($fp)
+li $t2 1
+sub $t0 $t1 $t2
+sw $t0 24($fp)
+lw $t1 16($fp)
+lw $t2 12($fp)
+mult $t1 $t2
+mflo $t0
+sw $t0 28($fp)
+li $a0 8
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 24($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+lw $t0 28($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 16($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+function0:
+move $t2 $a0
+li $a0 24
+li $v0 9
+syscall
+move $t0 $fp
+move $fp $v0
+sw $t0 0($fp)
+sw $ra 4($fp)
+sw $a1 8($fp)
+li $t0 4
+sw $t0 12($fp)
+li $a0 4
+li $v0 9
+syscall
+move $a0 $v0
+lw $t0 12($fp)
+sw $t0 0($v0)
+addi $v0 $v0 4
+move $t7 $fp
+lw $t7 8($t7)
+lw $t0 12($t7)
+lw $t1 0($t0)
+lw $a1 4($t0)
+jal $t1
+move $v0 $v0
+lw $t0 4($fp)
+lw $fp 0($fp)
+jr $t0
+\end{lstlisting}
+RESULT - 24
+
+
+\section{Examples}
 
 \end{document}
