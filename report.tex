@@ -147,6 +147,27 @@ r7 := r5 < r6
 IF r7 GOTO 2
 \end{lstlisting}
 
+\subsubsection{List of TAC instuctions}
+x := y                            Store the value of y in x
+x := y + z                        Add the values of y and z and store in x
+x := y - z                        Take y away from z and store in x
+x := y * z                        Multiply y and z and store in x
+x := y / z                        Divide y by z and store in x
+x := y < z                        Set x to 1 if y is smaller than z
+x := y > z                        Set x to 1 if y is larger than z
+x := y >= z                       Set x to 1 if y is larger or equal to z
+x := y <= z                       Set x to 1 if y is smaller or equal to z
+LABEL x:                          Create a label with the name x
+GOTO x                            jump to the label with name x
+IF NOT x GOTO y                   If x has the value 0 jump to y
+CREATE CLOSURE x                  Create a closure with the code label x
+x:                                Also a label of value x
+ALLOCATE PARAMS x                 Allocate a space for x number of parameters
+SAVE PARAM x                      Save the value of x in the next parameter space
+NEW FRAME x arg y loc z temp      Allocate space for the activation frame
+RETURN x                          Return the value in x from the current function
+FUNCTION END                      A tag for the end of the function
+
 \subsection{TAC Generation}
 
 All the TAC complilation is done in the tac\_compliler.c file.
@@ -230,6 +251,13 @@ the AST tree walk continues. This gives the result of placing any inner function
 the function it was defined in.
 
 \subsection{Next Use Info}
+
+As the TAC instructions are broken down into blocks next use informationn can be
+worked out to allow optimisation. The next use info for a block is calculated by
+using a recursive function which looks at each instruction in term from bottom
+to top. A list of NEXT_USE_INFO structures is used, one structure for each variable
+used in the block. Each NEXT_USE_INFO structure contains a list of the uses of that
+variable and the associated liveness at that point. This is all done in the nextUseInfo.c file.
 
 \subsection{TAC Optimisation}
 

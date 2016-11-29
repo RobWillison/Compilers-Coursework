@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2016.7.14)  29 NOV 2016 13:46
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2016.7.14)  29 NOV 2016 16:33
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -422,7 +422,9 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <7> on input line 4.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <5> on input line 4.
-)
+ [1
+
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}])
 \tf@toc=\write4
 \openout4 = `report.toc'.
 
@@ -441,12 +443,9 @@ Underfull \hbox (badness 10000) in paragraph at lines 18--28
 
  []
 
-[1
-
-{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
+[2]
 LaTeX Font Info:    Try loading font information for OMS+cmr on input line 52.
-
-(/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
+ (/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
@@ -460,12 +459,12 @@ File: omlcmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
 LaTeX Font Info:    Font shape `OML/cmr/m/n' in size <10> not available
 (Font)              Font shape `OML/cmm/m/it' tried instead on input line 99.
  [4]
-Underfull \hbox (badness 10000) in paragraph at lines 152--159
+Underfull \hbox (badness 10000) in paragraph at lines 173--180
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 152--159
+Underfull \hbox (badness 10000) in paragraph at lines 173--180
 
  []
 
@@ -476,7 +475,7 @@ See the tikz package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.186   \node[block] (c) at [
+l.207   \node[block] (c) at [
                              yshift=-2cm] {x - r1};
 ? 
 
@@ -486,7 +485,7 @@ See the tikz package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.187   \node[block] (d) at [
+l.208   \node[block] (d) at [
                              yshift=-4cm] {test - \_0};
 ? 
 
@@ -496,36 +495,58 @@ See the tikz package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.188   \node[block, right=of a] (e) at [
+l.209   \node[block, right=of a] (e) at [
                                          yshift=-2cm, xshift=1.2cm] {y - r2};
 ? 
 [5]
-Underfull \hbox (badness 10000) in paragraph at lines 200--208
+Underfull \hbox (badness 10000) in paragraph at lines 221--229
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 200--208
+Underfull \hbox (badness 10000) in paragraph at lines 221--229
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 200--208
+Underfull \hbox (badness 10000) in paragraph at lines 221--229
 
  []
 
-[6] [7] [8] [9]
-Overfull \hbox (15.0pt too wide) in paragraph at lines 488--525
+[6]
+! Missing $ inserted.
+<inserted text> 
+                $
+l.258 to top. A list of NEXT_
+                             USE_INFO structures is used, one structure for ...
+
+? 
+! Missing $ inserted.
+<inserted text> 
+                $
+l.261 
+      
+? 
+
+Overfull \hbox (752.25507pt too wide) in paragraph at lines 255--261
+\OT1/cmr/m/n/10 tom to top. A list of NEXT$[]\OML/cmm/m/it/10 SE[]NFOstructures
+isused; onestructureforeachvariableusedintheblock:EachNEXT[]SE[]NFOstructurecon
+tainsalistoftheusesofthatvariableandtheassociatedlivenessatthatpoint:Thisisalld
+oneinthenextUseInfo:cfile:$ 
+ []
+
+[7] [8] [9]
+Overfull \hbox (15.0pt too wide) in paragraph at lines 516--553
 []$[]$$[]$ 
  []
 
 [10]
-Overfull \hbox (33.00385pt too wide) in paragraph at lines 566--567
+Overfull \hbox (33.00385pt too wide) in paragraph at lines 594--595
 [][][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Overfull \hbox (3.00354pt too wide) in paragraph at lines 574--575
+Overfull \hbox (3.00354pt too wide) in paragraph at lines 602--603
 [][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
@@ -543,14 +564,15 @@ Here is how much of TeX's memory you used:
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texl
-ive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/tex
-mf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist
-/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share/texlive/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on report.pdf (38 pages, 138102 bytes).
+ive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist
+/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/
+type1/public/amsfonts/cm/cmr17.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
+ublic/amsfonts/cm/cmsy10.pfb>
+Output written on report.pdf (38 pages, 154699 bytes).
 PDF statistics:
- 160 PDF objects out of 1000 (max. 8388607)
- 111 compressed objects within 2 object streams
+ 164 PDF objects out of 1000 (max. 8388607)
+ 114 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 

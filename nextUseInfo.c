@@ -11,15 +11,6 @@
 
 NEXT_USE_INFO *nextUseInfoList = NULL;
 
-// void print_tac_single(TAC *tac)
-// {
-//   if (!tac) return;
-//   TAC *temp = tac->next;
-//   tac->next = NULL;
-//
-//   tac->next = temp;
-// }
-
 int locationIsALocal(LOCATION *location)
 {
   if (location->type != LOCTOKEN) return 0;
@@ -27,22 +18,6 @@ int locationIsALocal(LOCATION *location)
 
   return token->type == IDENTIFIER;
 }
-
-// void printNextUse()
-// {
-//   NEXT_USE_INFO *pointer = nextUseInfoList;
-//   while (pointer) {
-//     VARIABLE_NEXT_USE *var = pointer->variable;
-//     printf("VARIBALE %s\n", get_location(var->location));
-//     while (var)
-//     {
-//       printf("Live: %d\n", var->live);
-//       print_tac_single(var->nextUse);
-//       var = var->next;
-//     }
-//     pointer = pointer->next;
-//   }
-// }
 
 NEXT_USE_INFO *newNextUseInfo(VARIABLE_NEXT_USE *variable)
 {

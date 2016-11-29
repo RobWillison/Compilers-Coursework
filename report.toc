@@ -1,7 +1,8 @@
-\contentsline {section}{\numberline {1}Overview}{1}
+\contentsline {section}{\numberline {1}Overview}{2}
 \contentsline {section}{\numberline {2}Code Interpretation}{3}
 \contentsline {section}{\numberline {3}Intermediate Code Generation}{3}
 \contentsline {subsection}{\numberline {3.1}TAC Design}{3}
+\contentsline {subsubsection}{\numberline {3.1.1}List of TAC instuctions}{5}
 \contentsline {subsection}{\numberline {3.2}TAC Generation}{5}
 \contentsline {subsubsection}{\numberline {3.2.1}Enviroment Structure}{5}
 \contentsline {subsubsection}{\numberline {3.2.2}TAC Blocking}{6}
@@ -9,7 +10,7 @@
 \contentsline {subsection}{\numberline {3.3}Next Use Info}{7}
 \contentsline {subsection}{\numberline {3.4}TAC Optimisation}{7}
 \contentsline {subsubsection}{\numberline {3.4.1}Copy Propagation}{7}
-\contentsline {subsubsection}{\numberline {3.4.2}Constant Folding}{7}
+\contentsline {subsubsection}{\numberline {3.4.2}Constant Folding}{8}
 \contentsline {subsubsection}{\numberline {3.4.3}Dead Code Elimination}{8}
 \contentsline {subsubsection}{\numberline {3.4.4}Common Sub Expression Elimination}{8}
 \contentsline {subsubsection}{\numberline {3.4.5}Algebraic Transformations}{9}
