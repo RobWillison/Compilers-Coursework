@@ -16,9 +16,14 @@
 
 \section{Overview}
 This report is an explanation of the design decisions undertaken while writing
-a --C compiler and interpreter. The project was writtern in C and involves three
+a --C compiler and interpreter. The project was written in C and involves three
 different sections of code, an interpreter, TAC compiler and MIPS compiler.\\~\\
-\\Todo bit on interpreter, what it supports ect
+
+The interpreter for --C handles functions, closures, if - else statements and while loops.
+It uses an environment comprised of frames to store variable values in different scopes. Each
+variable can either be a integer or closure. The major design decisions in the compiler
+include the
+
 The TAC Compiler performs a walk over the AST at each node a section of TAC is created.
 The TAC is separated into blocks between each label and jump, this allows next use
 information to be generated in order for easy TAC optimisation.\\~\\
@@ -44,11 +49,23 @@ assignment is made and new frames are added each time a new scope is entered, fr
 removed from the list when this scope is left.
 
 \subsection{Closures \& Functions}
-In order to store and call closures there is a closure structure 
-One of the other fields in the union structure is the hasReturned field,
-this is set when the node is a return instruction. If the has returned field is set
+In order to store and call closures there is a closure structure this holds a pointer
+to the environment frame the closure was defined in and also a pointer to the start node
+of the AST that defines the function. Then when a closure is applied the variable is pulled
+out of the environment and the AST interpreted with the environment it was defined with.\\~\\
+The interpretation of the functions AST continues until a return node is found, at
+this point the hasReturned field is set. When the has returned field is set
 no other lines of code in the current function are executed and the function returns this
 value.
+
+\subsection{Control Structure}
+There are two types of control structure in --C the if-else and while loop.
+In order to interpret an if - else statement the condition is interpreted and depending on
+if the value is non-zero or not either the right or left child.\\
+For the while loop firstly the conditional is returned then the body, this is repeated
+while the conditional is non-zero.
+
+
 
 \section{Intermediate Code Generation}
 
@@ -513,13 +530,18 @@ RETURN result
 
 \section{Machine Code Generation}
 
-After the TAC cEnvironmenten generated and optimised the code is translated to MIPS
+After the TAC is generated and optimised the code is translated to MIPS
 assembler. This is done block by block in the order the TAC was generated.
 Before the user code is compiled a global MIPS block is added which allocates memory
 for global scope functions and sets up the environment used for variable lookup.\\
 A decision was made to store all variables in memory and ignore the problem of register
 assignment, this makes the compiler simpler however reduces its performance. The files
-associated with this section of the compiler are compiler.c and MIPS.c.
+associated with this section of the compiler are compiler.c and MIPS.c.\\
+In order for the users code to be run the main function has to be found as it
+was renamed by the TAC to _0. A mips main function is added at the head of the mips
+this contains a dynamic allocation of memory for the global scope functions, it then
+fills these spaces with the functions. After this it calls the function _0, the users
+main function.
 
 \subsubsection{Functions}
 When a function is compiled the first thing that happens is the number of locals,
@@ -627,6 +649,14 @@ jal $t1             The code is jumped to
 \end{lstlisting}
 
 \section{Testing}
+
+Both the compiler and the interpretter had tests writtern for them, these are run
+by a python script ``test.py" and were run after each change was made to check
+nothing had been broken. The interpreter test simply runs the code with an example
+and checks the output has the correct value. In order to automatically test the
+compiler I had to write a custom error handler script which calls the main function
+then prints the returned value out, with this the spim command line tool can be used
+to check the values returned by the mips code are correct.
 
 \subsection{Interpretation}
 The interpreter was run with various test cases, the results from some of these
