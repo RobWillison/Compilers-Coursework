@@ -18,7 +18,7 @@
 This report is an explanation of the design decisions undertaken while writing
 a --C compiler and interpreter. The project was writtern in C and involves three
 different sections of code, an interpreter, TAC compiler and MIPS compiler.\\~\\
-\\Todo bit on interpreter
+\\Todo bit on interpreter, what it supports ect
 The TAC Compiler performs a walk over the AST at each node a section of TAC is created.
 The TAC is separated into blocks between each label and jump, this allows next use
 information to be generated in order for easy TAC optimisation.\\~\\
@@ -29,7 +29,26 @@ compiler.
 \newpage
 \section{Code Interpretation}
 
-In order for
+In order to interpret --C code the abstract syntax tree is walked, at each node
+the left and right children are compiled and the nodes operation is applied to them.
+In order to support both integer and closure return types all the functions which handle
+node interpretation return a union structure which either contains the integer value or
+a pointer to the closure. The interpreter supports variable assignment, closures, if-else and while
+statements I will explain each now.
+
+\subsection{Variable Assignment}
+In order to store a value an environment structure was implemented this consists
+of a list of frames, one for each scope in the program, and each frame contains a
+list of bindings of token to union. The environment is added to each type a variable
+assignment is made and new frames are added each time a new scope is entered, frames are
+removed from the list when this scope is left.
+
+\subsection{Closures \& Functions}
+In order to store and call closures there is a closure structure 
+One of the other fields in the union structure is the hasReturned field,
+this is set when the node is a return instruction. If the has returned field is set
+no other lines of code in the current function are executed and the function returns this
+value.
 
 \section{Intermediate Code Generation}
 
