@@ -5,6 +5,11 @@ int times2(int n) {
   return times(n, 2);
 }
 
+int times(int n)
+{
+  return n;
+}
+
 int main()
 {
   return times2(3);

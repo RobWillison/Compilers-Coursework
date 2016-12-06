@@ -2,6 +2,8 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{tikz}
+\usepackage{cite}
+
 \usetikzlibrary{positioning,fit,calc}
 \tikzset{block/.style={draw,thick,text width=2cm,minimum height=1cm,align=center},
          line/.style={-latex}
@@ -21,15 +23,28 @@ different sections of code, an interpreter, TAC compiler and MIPS compiler.\\~\\
 
 The interpreter for --C handles functions, closures, if - else statements and while loops.
 It uses an environment comprised of frames to store variable values in different scopes. Each
-variable can either be a integer or closure. The major design decisions in the interpreter
-include the design 
+variable can either be a integer or closure.
 
-The TAC Compiler performs a walk over the AST at each node a section of TAC is created.
-The TAC is separated into blocks between each label and jump, this allows next use
-information to be generated in order for easy TAC optimisation.\\~\\
-For the MIPS the problem of delayed branching was ignored to simplify the compiler
-and due to time constraints I didn't get round to adding the required nops into the
-compiler.
+The TAC Compiler supports the same features as the interpreter. It translates the
+--C code into TAC blocks and performs block level optimistation to reduce the number
+of instructions generated. In order to perform this optimisation the next use information
+is calculated for each of the blocks. Just like in the GCC compiler the basic blocks
+have two links, one to the previous block and one to the next \cite{gnublock}. These
+two link the blocks in a way as to preserve the sequence of instructions. It was decided
+not to implement a control flow graph \cite{Allen:1970:CFA:390013.808479}, this was because
+this information is not required for the basic block optimisation or the techniques used
+to create MIPS code.\\
+As --C allows for functions to be defined within functions the compiler must support
+nested function definitions. In the TAC these nested functions are flatterend so
+there are no nested function definitions, this was done to simplify and unify the way
+all functions apear in the generated mips code. For this to work the TAC translater renames
+all functions to numbers using a simple count variable, this allows functions in diffrent
+scopes to still have the same name.\\
+The environment for the TAC compiler consitits of a linked list of frames each frame
+contating a binding of token to the register it is contained in this is one of the
+simplest to implement an enviroment \cite{Cardelli:1984:CFL:800055.802037}. Another
+reason for this enviroment structure is it means all a closure object needs is a
+pointer to the coresponding frame and the function start address.  
 
 \newpage
 \section{Code Interpretation}
@@ -647,6 +662,12 @@ lw $t1 0($t0)       The code address is loaded
 lw $a1 4($t0)       The enclosing frame is loaded into $a0
 jal $t1             The code is jumped to
 \end{lstlisting}
+
+\newpage
+\addcontentsline{toc}{section}{References}
+\bibliography{references}{}
+\bibliographystyle{plain}
+\newpage
 
 \section{Testing}
 
