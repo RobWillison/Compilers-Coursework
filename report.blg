@@ -4,45 +4,45 @@ The top-level auxiliary file: report.aux
 The style file: plain.bst
 Database file #1: references.bib
 Warning--to sort, need author or key in gnublock
-You've used 1 entry,
+You've used 3 entries,
             2118 wiz_defined-function locations,
-            501 strings with 4100 characters,
-and the built_in function-call counts, 188 in all, are:
-= -- 17
-> -- 1
-< -- 0
-+ -- 1
-- -- 0
-* -- 7
-:= -- 28
-add.period$ -- 3
-call.type$ -- 1
-change.case$ -- 3
+            520 strings with 4435 characters,
+and the built_in function-call counts, 892 in all, are:
+= -- 97
+> -- 15
+< -- 1
++ -- 7
+- -- 4
+* -- 51
+:= -- 134
+add.period$ -- 10
+call.type$ -- 3
+change.case$ -- 11
 chr.to.int$ -- 0
-cite$ -- 2
-duplicate$ -- 7
-empty$ -- 24
-format.name$ -- 0
-if$ -- 43
+cite$ -- 4
+duplicate$ -- 41
+empty$ -- 87
+format.name$ -- 4
+if$ -- 202
 int.to.chr$ -- 0
-int.to.str$ -- 1
-missing$ -- 0
-newline$ -- 8
-num.names$ -- 0
-pop$ -- 10
+int.to.str$ -- 3
+missing$ -- 2
+newline$ -- 18
+num.names$ -- 4
+pop$ -- 16
 preamble$ -- 1
-purify$ -- 2
+purify$ -- 8
 quote$ -- 0
-skip$ -- 5
+skip$ -- 31
 stack$ -- 0
-substring$ -- 5
-swap$ -- 1
-text.length$ -- 0
+substring$ -- 63
+swap$ -- 12
+text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 4
+type$ -- 12
 warning$ -- 1
-while$ -- 0
-width$ -- 2
-write$ -- 11
+while$ -- 9
+width$ -- 4
+write$ -- 36
 (There was 1 warning)

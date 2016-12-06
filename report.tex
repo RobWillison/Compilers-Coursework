@@ -35,16 +35,15 @@ not to implement a control flow graph \cite{Allen:1970:CFA:390013.808479}, this 
 this information is not required for the basic block optimisation or the techniques used
 to create MIPS code.\\
 As --C allows for functions to be defined within functions the compiler must support
-nested function definitions. In the TAC these nested functions are flatterend so
+nested function definitions. In the TAC these nested functions are flattened so
 there are no nested function definitions, this was done to simplify and unify the way
-all functions apear in the generated mips code. For this to work the TAC translater renames
+all functions apear in the generated mips code. For this to work the TAC translator renames
 all functions to numbers using a simple count variable, this allows functions in diffrent
 scopes to still have the same name.\\
-The environment for the TAC compiler consitits of a linked list of frames each frame
-contating a binding of token to the register it is contained in this is one of the
-simplest to implement an enviroment \cite{Cardelli:1984:CFL:800055.802037}. Another
-reason for this enviroment structure is it means all a closure object needs is a
-pointer to the coresponding frame and the function start address.  
+The environment for the TAC compiler consists of a linked list of frames each frame
+containing a binding of token to the register it is contained in this is one of the
+simplest to implement an environment \cite{Cardelli:1984:CFL:800055.802037}. This
+enviroment structure is very similar to that of the interpreter and MIPS translator.\\~\\
 
 \newpage
 \section{Code Interpretation}

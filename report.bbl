@@ -5,4 +5,15 @@ Gnu basic blocks.
 \newblock \url{https://gcc.gnu.org/onlinedocs/gccint/Basic-Blocks.html}.
 \newblock Accessed: 06-12-2016.
 
+\bibitem{Allen:1970:CFA:390013.808479}
+Frances~E. Allen.
+\newblock Control flow analysis.
+\newblock {\em SIGPLAN Not.}, 5(7):1--19, July 1970.
+
+\bibitem{Cardelli:1984:CFL:800055.802037}
+Luca Cardelli.
+\newblock Compiling a functional language.
+\newblock In {\em Proceedings of the 1984 ACM Symposium on LISP and Functional
+  Programming}, LFP '84, pages 208--217, New York, NY, USA, 1984. ACM.
+
 \end{thebibliography}
