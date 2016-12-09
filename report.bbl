@@ -16,4 +16,10 @@ Luca Cardelli.
 \newblock In {\em Proceedings of the 1984 ACM Symposium on LISP and Functional
   Programming}, LFP '84, pages 208--217, New York, NY, USA, 1984. ACM.
 
+\bibitem{matz2003design}
+Michael Matz.
+\newblock Design and implementation of a graph coloring register allocator for
+  gcc.
+\newblock In {\em GCC Developers Summit}, pages 151--170, 2003.
+
 \end{thebibliography}
